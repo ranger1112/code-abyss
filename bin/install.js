@@ -4,8 +4,16 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const VERSION = require(path.join(__dirname, '..', 'package.json')).version;
+const pkg = require(path.join(__dirname, '..', 'package.json'));
+const VERSION = pkg.version;
 const HOME = os.homedir();
+
+// ── Node.js 版本检查 ──
+const MIN_NODE = pkg.engines?.node?.match(/(\d+)/)?.[1] || '18';
+if (parseInt(process.versions.node) < parseInt(MIN_NODE)) {
+  console.error(`\x1b[31m✘ 需要 Node.js >= ${MIN_NODE}，当前: ${process.versions.node}\x1b[0m`);
+  process.exit(1);
+}
 const SKIP = ['__pycache__', '.pyc', '.pyo', '.egg-info', '.DS_Store', 'Thumbs.db', '.git'];
 const PKG_ROOT = fs.realpathSync(path.join(__dirname, '..'));
 
@@ -209,6 +217,10 @@ function runUninstall(tgt) {
   if (!fs.existsSync(manifestPath)) { fail(`未找到安装记录: ${manifestPath}`); process.exit(1); }
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  if (manifest.manifest_version && manifest.manifest_version > 1) {
+    fail(`manifest 版本 ${manifest.manifest_version} 不兼容，请升级 code-abyss 后再卸载`);
+    process.exit(1);
+  }
   divider(`卸载 Code Abyss v${manifest.version}`);
 
   (manifest.installed || []).forEach(f => {
@@ -245,7 +257,7 @@ function installCore(tgt) {
     { src: 'skills', dest: 'skills' }
   ].filter(f => f.dest !== null);
 
-  const manifest = { version: VERSION, target: tgt, timestamp: new Date().toISOString(), installed: [], backups: [] };
+  const manifest = { manifest_version: 1, version: VERSION, target: tgt, timestamp: new Date().toISOString(), installed: [], backups: [] };
 
   filesToInstall.forEach(({ src, dest }) => {
     const srcPath = path.join(PKG_ROOT, src);
@@ -349,6 +361,7 @@ async function installCcline(ctx) {
   const { execSync } = require('child_process');
   const cclineDir = path.join(HOME, '.claude', 'ccline');
   const cclineBin = path.join(cclineDir, process.platform === 'win32' ? 'ccline.exe' : 'ccline');
+  const errors = [];
 
   // 1. 检测是否已有二进制
   let hasBin = fs.existsSync(cclineBin);
@@ -366,8 +379,9 @@ async function installCcline(ctx) {
       else {
         try { execSync('ccline --version', { stdio: 'pipe' }); hasBin = true; ok('ccline 安装成功 (全局)'); } catch (e) {}
       }
+      if (!hasBin) errors.push('ccline 二进制安装后仍未检测到');
     } catch (e) {
-      warn('npm install -g @cometix/ccline 失败');
+      errors.push(`npm install -g @cometix/ccline 失败: ${e.message}`);
       info(`手动安装: ${c.cyn('npm install -g @cometix/ccline')}`);
       info(`或下载: ${c.cyn('https://github.com/Haleclipse/CCometixLine/releases')}`);
     }
@@ -392,7 +406,7 @@ async function installCcline(ctx) {
     // 无打包配置，回退到 ccline --init
     if (hasBin && !fs.existsSync(targetConfig)) {
       try { execSync('ccline --init', { stdio: 'inherit' }); ok('ccline 默认配置已生成'); }
-      catch (e) { warn('ccline --init 失败，可手动运行'); }
+      catch (e) { errors.push(`ccline --init 失败: ${e.message}`); }
     }
   }
 
@@ -400,6 +414,13 @@ async function installCcline(ctx) {
   ctx.settings.statusLine = CCLINE_STATUS_LINE.statusLine;
   ok(`statusLine → ${c.cyn(CCLINE_STATUS_LINE.statusLine.command)}`);
   fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
+
+  // 5. 汇总报告
+  if (errors.length > 0) {
+    console.log('');
+    warn(c.b(`ccline 安装有 ${errors.length} 个问题:`));
+    errors.forEach(e => fail(`  ${e}`));
+  }
 
   console.log('');
   warn(`需要 ${c.b('Nerd Font')} 字体才能正确显示图标`);

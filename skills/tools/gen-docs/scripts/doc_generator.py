@@ -5,6 +5,7 @@
 """
 
 import os
+import re
 import sys
 import json
 import ast
@@ -125,13 +126,41 @@ def analyze_module(path: Path) -> ModuleInfo:
     if language == 'Python':
         return analyze_python_module(path)
 
-    # 通用分析
+    # 通用分析（regex fallback 提取函数/类）
     info = ModuleInfo(name=path.name, path=str(path), language=language)
 
+    lang_patterns = {
+        'Go':         (r'^\s*func\s+(\w+)', r'^\s*type\s+(\w+)\s+struct\b'),
+        'Rust':       (r'^\s*(?:pub\s+)?fn\s+(\w+)', r'^\s*(?:pub\s+)?struct\s+(\w+)'),
+        'TypeScript': (r'^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)', r'^\s*(?:export\s+)?class\s+(\w+)'),
+        'JavaScript': (r'^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)', r'^\s*(?:export\s+)?class\s+(\w+)'),
+        'Java':       (r'^\s*(?:public|private|protected)?\s*(?:static\s+)?\w+\s+(\w+)\s*\(', r'^\s*(?:public\s+)?class\s+(\w+)'),
+        'C++':        (r'^\s*(?:\w+\s+)+(\w+)\s*\([^;]*$', r'^\s*class\s+(\w+)'),
+        'C':          (r'^\s*(?:\w+\s+)+(\w+)\s*\([^;]*$', None),
+    }
+
     code_extensions = {'.py', '.go', '.rs', '.ts', '.js', '.java', '.c', '.cpp'}
+    func_pat, cls_pat = lang_patterns.get(language, (None, None))
+
     for f in path.rglob('*'):
         if f.is_file() and f.suffix.lower() in code_extensions:
-            info.files.append(str(f.relative_to(path)))
+            rel = str(f.relative_to(path))
+            info.files.append(rel)
+
+            if func_pat or cls_pat:
+                try:
+                    content = f.read_text(encoding='utf-8', errors='ignore')
+                    for line in content.split('\n'):
+                        if func_pat:
+                            m = re.match(func_pat, line)
+                            if m and not m.group(1).startswith('_'):
+                                info.functions.append({"name": m.group(1), "file": rel, "doc": ""})
+                        if cls_pat:
+                            m = re.match(cls_pat, line)
+                            if m and not m.group(1).startswith('_'):
+                                info.classes.append({"name": m.group(1), "file": rel, "doc": ""})
+                except Exception:
+                    continue
 
     return info
 

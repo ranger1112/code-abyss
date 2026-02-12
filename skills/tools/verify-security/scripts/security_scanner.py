@@ -95,7 +95,8 @@ SECURITY_RULES = [
         "id": "HARDCODED_SECRET",
         "category": "敏感信息",
         "severity": Severity.HIGH,
-        "pattern": r'(password|passwd|pwd|secret|api_key|apikey|token|auth)\s*=\s*["\'][^"\']{8,}["\']',
+        "pattern": r'(?<!\w)(password|passwd|pwd|secret|api_key|apikey|token|auth_token)\s*=\s*["\'][^"\']{8,}["\']',
+        "exclude_pattern": r'(example|placeholder|changeme|xxx|your[_-]|TODO|FIXME|<.*>|\*{3,})',
         "extensions": [".py", ".js", ".ts", ".go", ".java", ".php", ".rb", ".yaml", ".yml", ".json", ".env"],
         "message": "可能存在硬编码密钥/密码",
         "recommendation": "使用环境变量或密钥管理服务"
@@ -245,6 +246,11 @@ def scan_file(file_path: Path, rules: List[Dict]) -> List[Finding]:
                 continue
 
             if pattern.search(line):
+                # 排除已知安全模式（如 placeholder、example）
+                exclude = rule.get("exclude_pattern")
+                if exclude and re.search(exclude, line, re.IGNORECASE):
+                    continue
+
                 findings.append(Finding(
                     severity=rule["severity"],
                     category=rule["category"],
