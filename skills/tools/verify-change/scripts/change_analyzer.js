@@ -4,6 +4,7 @@
 const { execSync } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const { parseCliArgs, buildReport, hasFatal, DASH } = require(path.join(__dirname, '..', '..', 'lib', 'shared.js'));
 
 const CODE_EXT = new Set([".py",".go",".rs",".ts",".js",".jsx",".tsx",".java",".c",".cpp",".h",".hpp"]);
 const DOC_EXT = new Set([".md",".rst",".txt",".adoc"]);
@@ -61,7 +62,7 @@ function parsePorcelainLine(line) {
 }
 
 function git(args) {
-  try { return execSync(`git ${args}`, { encoding: "utf8", stdio: ["pipe","pipe","pipe"] }); }
+  try { return execSync('git ' + args, { encoding: "utf8", stdio: ["pipe","pipe","pipe"] }); }
   catch { return ""; }
 }
 
@@ -146,14 +147,22 @@ function checkDocSync(changes, modules) {
     if (!modCode.length) continue;
     const total = modCode.reduce((s, c) => s + c.additions + c.deletions, 0);
     if (total > 50 && !docPaths.has(design)) {
-      issues.push({ severity: "warning", message: `模块 ${mod} 有较大代码变更 (${total} 行)，但 DESIGN.md 未更新`, related_files: modCode.map(c => c.path) });
+      issues.push({
+        severity: "warning",
+        message: `模块 ${mod} 有较大代码变更 (${total} 行)，但 DESIGN.md 未更新`,
+        related_files: modCode.map(c => c.path)
+      });
       docStatus[`${mod}/DESIGN.md`] = false;
     } else {
       docStatus[`${mod}/DESIGN.md`] = true;
     }
     const newFiles = modCode.filter(c => c.type === "added");
     if (newFiles.length && !docPaths.has(readme)) {
-      issues.push({ severity: "info", message: `模块 ${mod} 新增了文件，建议更新 README.md`, related_files: newFiles.map(c => c.path) });
+      issues.push({
+        severity: "info",
+        message: `模块 ${mod} 新增了文件，建议更新 README.md`,
+        related_files: newFiles.map(c => c.path)
+      });
     }
   }
   return { docStatus, issues };
@@ -165,12 +174,30 @@ function analyzeImpact(changes) {
   const tests = changes.filter(c => c.is_test);
   if (code.length && !tests.length) {
     const total = code.reduce((s, c) => s + c.additions + c.deletions, 0);
-    if (total > 30) issues.push({ severity: "warning", message: `代码变更 ${total} 行，但没有对应的测试更新`, related_files: code.map(c => c.path) });
+    if (total > 30) {
+      issues.push({
+        severity: "warning",
+        message: `代码变更 ${total} 行，但没有对应的测试更新`,
+        related_files: code.map(c => c.path)
+      });
+    }
   }
   const configs = changes.filter(c => c.is_config);
-  if (configs.length) issues.push({ severity: "info", message: "配置文件有变更，请确认是否需要更新文档", related_files: configs.map(c => c.path) });
+  if (configs.length) {
+    issues.push({
+      severity: "info",
+      message: "配置文件有变更，请确认是否需要更新文档",
+      related_files: configs.map(c => c.path)
+    });
+  }
   const deleted = changes.filter(c => c.type === "deleted");
-  if (deleted.length) issues.push({ severity: "info", message: `删除了 ${deleted.length} 个文件，请确认相关引用已清理`, related_files: deleted.map(c => c.path) });
+  if (deleted.length) {
+    issues.push({
+      severity: "info",
+      message: `删除了 ${deleted.length} 个文件，请确认相关引用已清理`,
+      related_files: deleted.map(c => c.path)
+    });
+  }
   return issues;
 }
 
@@ -195,18 +222,17 @@ function analyzeChanges(mode = "working") {
 }
 
 function formatReport(r, verbose) {
-  const L = [];
-  const sep = "=".repeat(60);
-  const sep2 = "-".repeat(40);
-  L.push(sep, "变更分析报告", sep);
-  L.push(`\n变更文件: ${r.changes.length}`);
-  L.push(`新增行数: +${r.totalAdd}`);
-  L.push(`删除行数: -${r.totalDel}`);
-  L.push(`受影响模块: ${[...r.modules].join(", ") || "无"}`);
-  L.push(`分析结果: ${r.passed ? "✓ 通过" : "✗ 需要关注"}`);
+  const fields = {
+    '变更文件': r.changes.length,
+    '新增行数': `+${r.totalAdd}`,
+    '删除行数': `-${r.totalDel}`,
+    '受影响模块': [...r.modules].join(", ") || "无",
+    '分析结果': r.passed ? "✓ 通过" : "✗ 需要关注",
+  };
+  let report = buildReport('变更分析报告', fields, r.issues, verbose);
 
   if (r.changes.length && verbose) {
-    L.push("\n" + sep2, "变更文件列表:", sep2);
+    const lines = ["\n" + DASH, "变更文件列表:", DASH];
     const icons = { added: "➕", modified: "📝", deleted: "➖", renamed: "📋" };
     for (const c of r.changes) {
       const tags = [];
@@ -215,56 +241,49 @@ function formatReport(r, verbose) {
       if (c.is_test) tags.push("测试");
       if (c.is_config) tags.push("配置");
       const t = tags.length ? ` [${tags.join(", ")}]` : "";
-      L.push(`  ${icons[c.type] || "📝"} ${c.path}${t} (+${c.additions}/-${c.deletions})`);
+      lines.push(`  ${icons[c.type] || "📝"} ${c.path}${t} (+${c.additions}/-${c.deletions})`);
     }
-  }
-
-  if (r.issues.length) {
-    L.push("\n" + sep2, "问题与建议:", sep2);
-    const si = { error: "✗", warning: "⚠", info: "ℹ" };
-    for (const i of r.issues) {
-      L.push(`\n  ${si[i.severity] || "ℹ"} [${i.severity.toUpperCase()}] ${i.message}`);
-      if (verbose && i.related_files.length) {
-        for (const f of i.related_files.slice(0, 5)) L.push(`      - ${f}`);
-        if (i.related_files.length > 5) L.push(`      ... 及其他 ${i.related_files.length - 5} 个文件`);
-      }
-    }
+    report += '\n' + lines.join('\n');
   }
 
   if (Object.keys(r.docStatus).length) {
-    L.push("\n" + sep2, "文档同步状态:", sep2);
+    const lines = ["\n" + DASH, "文档同步状态:", DASH];
     for (const [doc, synced] of Object.entries(r.docStatus)) {
-      L.push(`  ${synced ? "✓" : "✗"} ${doc}`);
+      lines.push(`  ${synced ? "✓" : "✗"} ${doc}`);
     }
+    report += '\n' + lines.join('\n');
   }
 
-  L.push("\n" + sep);
-  return L.join("\n");
+  return report;
 }
 
 // CLI
-const args = process.argv.slice(2);
-let mode = "working", verbose = false, jsonOut = false;
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === "--mode" && args[i + 1]) { mode = args[++i]; }
-  else if (args[i] === "-v" || args[i] === "--verbose") { verbose = true; }
-  else if (args[i] === "--json") { jsonOut = true; }
+if (require.main === module) {
+  const opts = parseCliArgs(process.argv);
+  const result = analyzeChanges(opts.mode || "working");
+
+  if (opts.json) {
+    console.log(JSON.stringify({
+      passed: result.passed,
+      total_additions: result.totalAdd,
+      total_deletions: result.totalDel,
+      affected_modules: [...result.modules],
+      changes: result.changes.map(c => ({
+        path: c.path, type: c.type, additions: c.additions,
+        deletions: c.deletions, is_code: c.is_code,
+        is_doc: c.is_doc, is_test: c.is_test
+      })),
+      issues: result.issues.map(i => ({
+        severity: i.severity, message: i.message,
+        related_files: i.related_files,
+      })),
+      doc_sync_status: result.docStatus,
+    }, null, 2));
+  } else {
+    console.log(formatReport(result, opts.verbose));
+  }
+
+  process.exit(result.passed ? 0 : 1);
 }
 
-const result = analyzeChanges(mode);
-
-if (jsonOut) {
-  console.log(JSON.stringify({
-    passed: result.passed,
-    total_additions: result.totalAdd,
-    total_deletions: result.totalDel,
-    affected_modules: [...result.modules],
-    changes: result.changes.map(c => ({ path: c.path, type: c.type, additions: c.additions, deletions: c.deletions, is_code: c.is_code, is_doc: c.is_doc, is_test: c.is_test })),
-    issues: result.issues.map(i => ({ severity: i.severity, message: i.message, related_files: i.related_files })),
-    doc_sync_status: result.docStatus,
-  }, null, 2));
-} else {
-  console.log(formatReport(result, verbose));
-}
-
-process.exit(result.passed ? 0 : 1);
+module.exports = { normalizePath, classifyFile, parsePorcelainLine, parseNameStatusLine, identifyModules };

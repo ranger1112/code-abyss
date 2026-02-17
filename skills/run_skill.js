@@ -66,19 +66,24 @@ function acquireTargetLock(args) {
   } catch (e) {
     if (e.code === 'EEXIST') {
       console.log(`⏳ 等待锁释放: ${target}`);
-      // 轮询等待，最多 30s
+      // 异步轮询等待，最多 30s
       const deadline = Date.now() + 30000;
-      while (Date.now() < deadline) {
+      const poll = () => {
+        if (Date.now() >= deadline) { console.error(`⏳ 等待锁超时: ${target}`); process.exit(1); }
         try {
           const fd = openSync(lockPath, 'wx');
           return { fd, lockPath };
-        } catch { /* busy wait */ }
-        const wait = 100;
-        const start = Date.now();
-        while (Date.now() - start < wait) { /* spin */ }
-      }
-      console.error(`⏳ 等待锁超时: ${target}`);
-      process.exit(1);
+        } catch { /* still locked */ }
+        return null;
+      };
+      const result = poll();
+      if (result) return result;
+      return new Promise((resolve) => {
+        const timer = setInterval(() => {
+          const r = poll();
+          if (r) { clearInterval(timer); resolve(r); }
+        }, 200);
+      });
     }
     // 其他错误，忽略锁继续执行
     return { fd: null, lockPath: null };

@@ -14,8 +14,10 @@ if (parseInt(process.versions.node) < parseInt(MIN_NODE)) {
   console.error(`\x1b[31m✘ 需要 Node.js >= ${MIN_NODE}，当前: ${process.versions.node}\x1b[0m`);
   process.exit(1);
 }
-const SKIP = ['__pycache__', '.pyc', '.pyo', '.egg-info', '.DS_Store', 'Thumbs.db', '.git'];
 const PKG_ROOT = fs.realpathSync(path.join(__dirname, '..'));
+const { shouldSkip, copyRecursive, rmSafe, deepMergeNew, printMergeLog } =
+  require(path.join(__dirname, 'lib', 'utils.js'));
+const { detectCclineBin, installCcline: _installCcline } = require(path.join(__dirname, 'lib', 'ccline.js'));
 
 // ── ANSI ──
 
@@ -49,7 +51,10 @@ function banner() {
 
 function divider(title) {
   const line = '─'.repeat(44);
-  console.log(`\n${c.d('┌' + line + '┐')}\n${c.d('│')} ${c.b(title)}${' '.repeat(Math.max(0, 43 - title.length))}${c.d('│')}\n${c.d('└' + line + '┘')}`);
+  const pad = ' '.repeat(Math.max(0, 43 - title.length));
+  console.log(`\n${c.d('┌' + line + '┐')}`);
+  console.log(`${c.d('│')} ${c.b(title)}${pad}${c.d('│')}`);
+  console.log(`${c.d('└' + line + '┘')}`);
 }
 
 function step(n, total, msg) { console.log(`\n  ${c.cyn(`[${n}/${total}]`)} ${c.b(msg)}`); }
@@ -58,69 +63,15 @@ function warn(msg) { console.log(`  ${c.ylw('⚠')} ${msg}`); }
 function info(msg) { console.log(`  ${c.blu('ℹ')} ${msg}`); }
 function fail(msg) { console.log(`  ${c.red('✘')} ${msg}`); }
 
-// ── 工具 ──
-
-function shouldSkip(name) { return SKIP.some(p => name.includes(p)); }
-
-function copyRecursive(src, dest) {
-  const stat = fs.statSync(src);
-  if (stat.isDirectory()) {
-    if (shouldSkip(path.basename(src))) return;
-    fs.mkdirSync(dest, { recursive: true });
-    fs.readdirSync(src).forEach(f => {
-      if (!shouldSkip(f)) copyRecursive(path.join(src, f), path.join(dest, f));
-    });
-  } else {
-    if (shouldSkip(path.basename(src))) return;
-    fs.copyFileSync(src, dest);
-  }
-}
-
-function rmSafe(p) {
-  if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
-}
-
-function deepMergeNew(target, source, prefix, log) {
-  for (const key of Object.keys(source)) {
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-    if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
-      if (!target[key] || typeof target[key] !== 'object') {
-        target[key] = {};
-        log.push({ k: fullKey, a: 'new', v: '{}' });
-      }
-      deepMergeNew(target[key], source[key], fullKey, log);
-    } else if (Array.isArray(source[key]) && Array.isArray(target[key])) {
-      const added = source[key].filter(v => !target[key].includes(v));
-      if (added.length > 0) {
-        target[key] = [...target[key], ...added];
-        log.push({ k: fullKey, a: 'add', v: `+${added.length}` });
-      } else {
-        log.push({ k: fullKey, a: 'keep', v: '完整' });
-      }
-    } else if (key in target) {
-      log.push({ k: fullKey, a: 'keep', v: JSON.stringify(target[key]) });
-    } else {
-      target[key] = source[key];
-      log.push({ k: fullKey, a: 'set', v: JSON.stringify(source[key]) });
-    }
-  }
-  return target;
-}
-
-function printMergeLog(log) {
-  log.forEach(({ k, a, v }) => {
-    if (a === 'keep') console.log(`  ${c.d('·')} ${c.d(`${k} (保留: ${v})`)}`);
-    else console.log(`  ${c.grn('+')} ${c.cyn(k)} = ${v}`);
-  });
-}
-
 // ── 认证 ──
 
 function detectClaudeAuth(settings) {
   const env = settings.env || {};
   if (env.ANTHROPIC_BASE_URL && env.ANTHROPIC_AUTH_TOKEN) return { type: 'custom', detail: env.ANTHROPIC_BASE_URL };
   if (process.env.ANTHROPIC_API_KEY) return { type: 'env', detail: 'ANTHROPIC_API_KEY' };
-  if (process.env.ANTHROPIC_BASE_URL && process.env.ANTHROPIC_AUTH_TOKEN) return { type: 'env-custom', detail: process.env.ANTHROPIC_BASE_URL };
+  if (process.env.ANTHROPIC_BASE_URL && process.env.ANTHROPIC_AUTH_TOKEN) {
+    return { type: 'env-custom', detail: process.env.ANTHROPIC_BASE_URL };
+  }
   const cred = path.join(HOME, '.claude', '.credentials.json');
   if (fs.existsSync(cred)) {
     try {
@@ -257,13 +208,19 @@ function installCore(tgt) {
     { src: 'skills', dest: 'skills' }
   ].filter(f => f.dest !== null);
 
-  const manifest = { manifest_version: 1, version: VERSION, target: tgt, timestamp: new Date().toISOString(), installed: [], backups: [] };
+  const manifest = {
+    manifest_version: 1, version: VERSION, target: tgt,
+    timestamp: new Date().toISOString(), installed: [], backups: []
+  };
 
   filesToInstall.forEach(({ src, dest }) => {
     const srcPath = path.join(PKG_ROOT, src);
     const destPath = path.join(targetDir, dest);
     if (!fs.existsSync(srcPath)) {
-      if (src === 'skills') { fail(`核心文件缺失: ${srcPath}\n    请尝试: npm cache clean --force && npx code-abyss`); process.exit(1); }
+      if (src === 'skills') {
+        fail(`核心文件缺失: ${srcPath}\n    请尝试: npm cache clean --force && npx code-abyss`);
+        process.exit(1);
+      }
       warn(`跳过: ${src}`); return;
     }
     if (fs.existsSync(destPath)) {
@@ -278,7 +235,12 @@ function installCore(tgt) {
   const settingsPath = path.join(targetDir, 'settings.json');
   let settings = {};
   if (fs.existsSync(settingsPath)) {
-    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) { warn(`settings.json 解析失败，将使用空配置`); settings = {}; }
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    } catch (e) {
+      warn(`settings.json 解析失败，将使用空配置`);
+      settings = {};
+    }
     fs.copyFileSync(settingsPath, path.join(backupDir, 'settings.json'));
     manifest.backups.push('settings.json');
   }
@@ -299,9 +261,28 @@ function installCore(tgt) {
 
 // ── Claude 后续 ──
 
-async function postClaude(ctx) {
-  const { select, checkbox, confirm, input } = await import('@inquirer/prompts');
+async function configureCustomProvider(ctx) {
+  const { confirm, input } = await import('@inquirer/prompts');
+  const doCfg = await confirm({ message: '配置自定义 provider?', default: false });
+  if (!doCfg) return;
+  if (!ctx.settings.env) ctx.settings.env = {};
+  const url = await input({ message: 'ANTHROPIC_BASE_URL:' });
+  const token = await input({ message: 'ANTHROPIC_AUTH_TOKEN:' });
+  if (url) ctx.settings.env.ANTHROPIC_BASE_URL = url;
+  if (token) ctx.settings.env.ANTHROPIC_AUTH_TOKEN = token;
+  fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
+  ok('provider 已配置');
+}
 
+function mergeSettings(ctx) {
+  const log = [];
+  deepMergeNew(ctx.settings, SETTINGS_TEMPLATE, '', log);
+  printMergeLog(log, c);
+  fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
+  ok('settings.json 合并完成');
+}
+
+async function postClaude(ctx) {
   step(2, 3, '认证检测');
   const auth = detectClaudeAuth(ctx.settings);
   if (auth) {
@@ -309,32 +290,18 @@ async function postClaude(ctx) {
   } else {
     warn('未检测到 API 认证');
     info(`支持: ${c.cyn('claude login')} | ${c.cyn('ANTHROPIC_API_KEY')} | ${c.cyn('自定义 provider')}`);
-    if (!autoYes) {
-      const doCfg = await confirm({ message: '配置自定义 provider?', default: false });
-      if (doCfg) {
-        if (!ctx.settings.env) ctx.settings.env = {};
-        const url = await input({ message: 'ANTHROPIC_BASE_URL:' });
-        const token = await input({ message: 'ANTHROPIC_AUTH_TOKEN:' });
-        if (url) ctx.settings.env.ANTHROPIC_BASE_URL = url;
-        if (token) ctx.settings.env.ANTHROPIC_AUTH_TOKEN = token;
-        fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
-        ok('provider 已配置');
-      }
-    }
+    if (!autoYes) await configureCustomProvider(ctx);
   }
 
   step(3, 3, '可选配置');
   if (autoYes) {
     info('自动模式: 合并推荐配置');
-    const log = [];
-    deepMergeNew(ctx.settings, SETTINGS_TEMPLATE, '', log);
-    printMergeLog(log);
-    fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
-    ok('settings.json 合并完成');
+    mergeSettings(ctx);
     await installCcline(ctx);
     return;
   }
 
+  const { checkbox } = await import('@inquirer/prompts');
   const choices = await checkbox({
     message: '选择要安装的配置 (空格选择, 回车确认)',
     choices: [
@@ -343,90 +310,12 @@ async function postClaude(ctx) {
     ],
   });
 
-  if (choices.includes('settings')) {
-    const log = [];
-    deepMergeNew(ctx.settings, SETTINGS_TEMPLATE, '', log);
-    printMergeLog(log);
-    fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
-    ok('settings.json 合并完成');
-  }
-  if (choices.includes('ccline')) {
-    await installCcline(ctx);
-  }
+  if (choices.includes('settings')) mergeSettings(ctx);
+  if (choices.includes('ccline')) await installCcline(ctx);
 }
 
 async function installCcline(ctx) {
-  console.log('');
-  info('安装 ccline 状态栏...');
-  const { execSync } = require('child_process');
-  const cclineDir = path.join(HOME, '.claude', 'ccline');
-  const cclineBin = path.join(cclineDir, process.platform === 'win32' ? 'ccline.exe' : 'ccline');
-  const errors = [];
-
-  // 1. 检测是否已有二进制
-  let hasBin = fs.existsSync(cclineBin);
-  if (!hasBin) {
-    try { execSync('ccline --version', { stdio: 'pipe' }); hasBin = true; } catch (e) {}
-  }
-
-  // 2. 未安装则通过 npm 安装（postinstall 自动下载原生二进制）
-  if (!hasBin) {
-    info('ccline 未检测到，正在安装...');
-    try {
-      execSync('npm install -g @cometix/ccline', { stdio: 'inherit' });
-      hasBin = fs.existsSync(cclineBin);
-      if (hasBin) ok('ccline 二进制安装成功');
-      else {
-        try { execSync('ccline --version', { stdio: 'pipe' }); hasBin = true; ok('ccline 安装成功 (全局)'); } catch (e) {}
-      }
-      if (!hasBin) errors.push('ccline 二进制安装后仍未检测到');
-    } catch (e) {
-      errors.push(`npm install -g @cometix/ccline 失败: ${e.message}`);
-      info(`手动安装: ${c.cyn('npm install -g @cometix/ccline')}`);
-      info(`或下载: ${c.cyn('https://github.com/Haleclipse/CCometixLine/releases')}`);
-    }
-  } else {
-    ok('ccline 二进制已存在');
-  }
-
-  // 3. 部署打包的 config.toml（覆盖默认配置）
-  const bundledConfig = path.join(PKG_ROOT, 'config', 'ccline', 'config.toml');
-  const targetConfig = path.join(cclineDir, 'config.toml');
-  if (fs.existsSync(bundledConfig)) {
-    fs.mkdirSync(cclineDir, { recursive: true });
-    if (fs.existsSync(targetConfig)) {
-      info(`备份: ${c.d('ccline/config.toml')}`);
-      const backupDir = path.join(HOME, '.claude', '.sage-backup');
-      fs.mkdirSync(backupDir, { recursive: true });
-      fs.copyFileSync(targetConfig, path.join(backupDir, 'ccline-config.toml'));
-    }
-    fs.copyFileSync(bundledConfig, targetConfig);
-    ok('ccline/config.toml 已部署 (Code Abyss 定制版)');
-  } else {
-    // 无打包配置，回退到 ccline --init
-    if (hasBin && !fs.existsSync(targetConfig)) {
-      try { execSync('ccline --init', { stdio: 'inherit' }); ok('ccline 默认配置已生成'); }
-      catch (e) { errors.push(`ccline --init 失败: ${e.message}`); }
-    }
-  }
-
-  // 4. 合并 statusLine 到 settings.json
-  ctx.settings.statusLine = CCLINE_STATUS_LINE.statusLine;
-  ok(`statusLine → ${c.cyn(CCLINE_STATUS_LINE.statusLine.command)}`);
-  fs.writeFileSync(ctx.settingsPath, JSON.stringify(ctx.settings, null, 2) + '\n');
-
-  // 5. 汇总报告
-  if (errors.length > 0) {
-    console.log('');
-    warn(c.b(`ccline 安装有 ${errors.length} 个问题:`));
-    errors.forEach(e => fail(`  ${e}`));
-  }
-
-  console.log('');
-  warn(`需要 ${c.b('Nerd Font')} 字体才能正确显示图标`);
-  info(`推荐: FiraCode Nerd Font / JetBrainsMono Nerd Font`);
-  info(`下载: ${c.cyn('https://www.nerdfonts.com/')}`);
-  ok('ccline 配置完成');
+  await _installCcline(ctx, { HOME, PKG_ROOT, CCLINE_STATUS_LINE, ok, warn, info, fail, c });
 }
 
 // ── Codex 后续 ──
@@ -531,4 +420,11 @@ function finish(ctx) {
   console.log(c.mag(`  ⚚ 劫——破——了——！！！\n`));
 }
 
-main().catch(err => { fail(err.message); process.exit(1); });
+if (require.main === module) {
+  main().catch(err => { fail(err.message); process.exit(1); });
+}
+
+module.exports = {
+  deepMergeNew, detectClaudeAuth, detectCodexAuth,
+  detectCclineBin, copyRecursive, shouldSkip, SETTINGS_TEMPLATE
+};

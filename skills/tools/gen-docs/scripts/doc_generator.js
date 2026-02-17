@@ -103,7 +103,8 @@ const LANG_PATTERNS = {
   'Rust':       [/^\s*(?:pub\s+)?fn\s+(\w+)/,     /^\s*(?:pub\s+)?struct\s+(\w+)/],
   'TypeScript': [/^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/, /^\s*(?:export\s+)?class\s+(\w+)/],
   'JavaScript': [/^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)/, /^\s*(?:export\s+)?class\s+(\w+)/],
-  'Java':       [/^\s*(?:public|private|protected)?\s*(?:static\s+)?\w+\s+(\w+)\s*\(/, /^\s*(?:public\s+)?class\s+(\w+)/],
+  'Java':       [/^\s*(?:public|private|protected)?\s*(?:static\s+)?\w+\s+(\w+)\s*\(/,
+                  /^\s*(?:public\s+)?class\s+(\w+)/],
   'C++':        [/^\s*(?:\w+\s+)+(\w+)\s*\([^;]*$/, /^\s*class\s+(\w+)/],
   'C':          [/^\s*(?:\w+\s+)+(\w+)\s*\([^;]*$/, null],
 };
@@ -176,18 +177,31 @@ function generateReadme(info) {
   L.push('## 使用方法', '');
   if (info.entry_points.length) {
     L.push('### 运行', '', '```bash');
-    const cmds = { Python: `python -m ${info.name}`, Go: 'go run ./cmd/main.go', Rust: 'cargo run', TypeScript: 'npm start', JavaScript: 'npm start' };
+    const cmds = {
+      Python: `python -m ${info.name}`, Go: 'go run ./cmd/main.go',
+      Rust: 'cargo run', TypeScript: 'npm start', JavaScript: 'npm start'
+    };
     L.push(cmds[info.language] || `# 请根据 ${info.language} 项目结构添加运行命令`);
     L.push('```', '');
   }
 
   L.push('### 示例', '');
   const EXAMPLES = {
-    Python: `from ${info.name.toLowerCase()} import main\n\n# 初始化\nobj = main()\n\n# 执行操作\nresult = obj.process()\nprint(result)`,
-    Go: `package main\n\nimport "${info.name.toLowerCase()}"\n\nfunc main() {\n    // 初始化\n    obj := ${info.name.toLowerCase()}.New()\n\n    // 执行操作\n    result := obj.Process()\n    println(result)\n}`,
-    Rust: `use ${info.name.toLowerCase()}::*;\n\nfn main() {\n    // 初始化\n    let obj = Object::new();\n\n    // 执行操作\n    let result = obj.process();\n    println!("{}", result);\n}`,
-    TypeScript: `import { main } from "./${info.name.toLowerCase()}";\n\n// 初始化\nconst obj = new main();\n\n// 执行操作\nconst result = obj.process();\nconsole.log(result);`,
-    JavaScript: `const { main } = require("./${info.name.toLowerCase()}");\n\n// 初始化\nconst obj = new main();\n\n// 执行操作\nconst result = obj.process();\nconsole.log(result);`,
+    Python: `from ${info.name.toLowerCase()} import main\n\n` +
+      `# 初始化\nobj = main()\n\n# 执行操作\nresult = obj.process()\nprint(result)`,
+    Go: `package main\n\nimport "${info.name.toLowerCase()}"\n\nfunc main() {\n` +
+      `    // 初始化\n    obj := ${info.name.toLowerCase()}.New()\n` +
+      `\n    // 执行操作\n    result := obj.Process()\n    println(result)\n}`,
+    Rust: `use ${info.name.toLowerCase()}::*;\n\nfn main() {\n` +
+      `    // 初始化\n    let obj = Object::new();\n\n` +
+      `    // 执行操作\n    let result = obj.process();\n` +
+      `    println!("{}", result);\n}`,
+    TypeScript: `import { main } from "./${info.name.toLowerCase()}";\n\n` +
+      `// 初始化\nconst obj = new main();\n\n` +
+      `// 执行操作\nconst result = obj.process();\nconsole.log(result);`,
+    JavaScript: `const { main } = require("./${info.name.toLowerCase()}");\n\n` +
+      `// 初始化\nconst obj = new main();\n\n` +
+      `// 执行操作\nconst result = obj.process();\nconsole.log(result);`,
   };
   if (EXAMPLES[info.language]) {
     L.push('```' + info.language.toLowerCase(), EXAMPLES[info.language], '```');

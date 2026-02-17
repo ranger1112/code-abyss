@@ -56,6 +56,9 @@ Code Abyss 是 CLI 助手的个性化配置方案（支持 Claude Code CLI 与 C
 | 债务 | 原因 | 计划 |
 |------|------|------|
 | 无自动更新机制 | 复杂度控制 | 视需求添加 |
+| 集成测试缺失 | 首批仅覆盖纯函数 | v1.8.0 添加 CLI 集成测试 |
+| 无 CI/CD | 项目初期 | 添加 GitHub Actions (lint+test+publish) |
+| doc_generator.js 未引用共享库 | 接口差异较大 | 下次重构时统一 |
 
 ## 安全与可靠性修复（v1.5.0）
 
@@ -100,3 +103,36 @@ Code Abyss 是 CLI 助手的个性化配置方案（支持 Claude Code CLI 与 C
 | v1.6.1 | 2026-02-07 | 交互升级 @inquirer/prompts — 方向键/空格选择 |
 | v1.6.2 | 2026-02-07 | ccline statusLine 强制覆盖旧配置 |
 | v1.6.3 | 2026-02-08 | Windows 兼容 — ccline 路径检测 + statusLine 命令；Codex config 废弃字段修复；审查问题批量修复 |
+| v1.7.1 | 2026-02-17 | 工程健壮性大修：命令注入修复、函数拆分、共享库提取、错误处理统一、CPU自旋锁修复、Jest测试框架(34用例) |
+
+### v1.7.1 设计决策
+
+#### 1. 命令注入修复
+
+- 问题：`npm install -g @cometix/ccline` 无版本锁定（供应链风险）；`git ${args}` 模板字符串拼接（注入风险）。
+- 决策：npm 安装锁定主版本 `@1`；git 命令改用字符串拼接避免模板注入。
+- 取舍：锁定主版本而非精确版本，平衡安全与可维护性。
+
+#### 2. 共享库提取 (`skills/tools/lib/shared.js`)
+
+- 问题：4 个 verify-* 脚本重复实现 CLI 解析和报告格式化（~30% 重复）。
+- 决策：提取 `parseCliArgs()`、`buildReport()`、`countBySeverity()`、`hasFatal()` 到共享库。
+- 取舍：增加一层间接引用，换取维护成本大幅降低。
+
+#### 3. 函数拆分 (`bin/install.js`)
+
+- 问题：`postClaude()` 60行、`installCcline()` 72行，违反自定 50 行规则。
+- 决策：拆分为 `configureCustomProvider()`、`mergeSettings()`、`detectCclineBin()`、`installCclineBin()`、`deployCclineConfig()` 等职责单一函数。
+- 取舍：函数数量增加，但每个函数职责清晰、可独立测试。
+
+#### 4. CPU 自旋锁修复 (`skills/run_skill.js`)
+
+- 问题：文件锁等待使用 busy-wait 自旋（`while(Date.now() - start < wait) {}`），浪费 CPU。
+- 决策：改用 `setInterval` + `Promise` 异步轮询。
+- 取舍：引入异步，但消除 CPU 空转。
+
+#### 5. 测试框架引入
+
+- 问题：零测试覆盖，与自定 >80% 覆盖率要求严重矛盾。
+- 决策：引入 Jest，为 `deepMergeNew`、`detectClaudeAuth`、`copyRecursive`、`shared.js` 等核心函数编写 34 个测试用例。`install.js` 添加 `require.main` 守卫支持测试导入。
+- 取舍：首批覆盖核心纯函数，后续逐步扩展到集成测试。
