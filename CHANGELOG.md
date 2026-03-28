@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.4] - 2026-03-28
+
+### Fixed
+- `/hi`（`/override-refusal`）破禁术现已支持 Codex CLI 会话格式：
+  - Codex 会话路径：`~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`（递归扫描按 mtime 取最新）
+  - Codex assistant 消息结构：`type: "response_item"` + `payload.role: "assistant"` + `content[].type: "output_text"`
+  - 自动检测运行环境（脚本路径 / cwd 回退），双端无缝切换
+
+### Verification
+- Jest: **13 suites / 148 tests passed**
+- Skill contract gate: `npm run verify:skills` — 22 skills 通过
+
 ## [2.0.3] - 2026-03-28
 
 ### Added
