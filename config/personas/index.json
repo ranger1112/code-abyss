@@ -31,6 +31,14 @@
       "file": "junior-sister.md",
       "gender": "female",
       "default": false
+    },
+    {
+      "slug": "iron-dad",
+      "label": "铁壁暖阳",
+      "description": "强壮温柔，刚柔并济，可靠体贴",
+      "file": "iron-dad.md",
+      "gender": "male",
+      "default": false
     }
   ]
 }
