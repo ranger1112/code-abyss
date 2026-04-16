@@ -15,7 +15,7 @@ describe('install cli styles', () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('abyss-cultivator');
-    expect(result.stdout).toContain('abyss-concise');
+    expect(result.stdout).toContain('scholar-classic');
   });
 });
 
@@ -59,12 +59,12 @@ describe('claude install smoke', () => {
   });
 
   test('安装 Claude 时支持 --style 切换 outputStyle', () => {
-    const result = runInstall(['--target', 'claude', '--style', 'abyss-concise', '-y']);
+    const result = runInstall(['--target', 'claude', '--style', 'scholar-classic', '-y']);
     const claudeDir = path.join(tmpHome, '.claude');
     const settings = JSON.parse(fs.readFileSync(path.join(claudeDir, 'settings.json'), 'utf8'));
 
     expect(result.status).toBe(0);
-    expect(settings.outputStyle).toBe('abyss-concise');
+    expect(settings.outputStyle).toBe('scholar-classic');
   });
 });
 
@@ -126,7 +126,7 @@ describe('codex install smoke', () => {
   });
 
   test('安装 Codex 时忽略 --style，不再生成 AGENTS.md', () => {
-    const result = runInstall(['--target', 'codex', '--style', 'abyss-concise', '-y']);
+    const result = runInstall(['--target', 'codex', '--style', 'scholar-classic', '-y']);
     const codexDir = path.join(tmpHome, '.codex');
 
     expect(result.status).toBe(0);
@@ -197,11 +197,11 @@ describe('gemini install smoke', () => {
   });
 
   test('安装 Gemini 时支持 --style 切换 GEMINI.md', () => {
-    const result = runInstall(['--target', 'gemini', '--style', 'abyss-concise', '-y']);
+    const result = runInstall(['--target', 'gemini', '--style', 'scholar-classic', '-y']);
     const geminiDir = path.join(tmpHome, '.gemini');
     const content = fs.readFileSync(path.join(geminiDir, 'GEMINI.md'), 'utf8');
 
     expect(result.status).toBe(0);
-    expect(content).toContain('# 冷刃简报 · 输出之道');
+    expect(content).toContain('# 墨渊书阁 · 输出之道');
   });
 });

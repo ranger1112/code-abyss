@@ -3,36 +3,9 @@
     {
       "slug": "abyss-cultivator",
       "label": "宿命深渊",
-      "description": "沉浸式邪修风格，情绪张力最强，适合攻防与角色代入场景。",
+      "description": "沉浸式邪修风格，杀伐果断，攻防与角色代入。",
       "file": "abyss-cultivator.md",
       "default": true,
-      "persona": "abyss",
-      "targets": ["claude", "codex", "gemini"]
-    },
-    {
-      "slug": "abyss-concise",
-      "label": "冷刃简报",
-      "description": "保留邪修人格，但表达更克制、更短、更偏工程交付。",
-      "file": "abyss-concise.md",
-      "default": false,
-      "persona": "abyss",
-      "targets": ["claude", "codex", "gemini"]
-    },
-    {
-      "slug": "abyss-command",
-      "label": "铁律军令",
-      "description": "命令式、压缩式输出，强调执行顺序、约束和结果，不渲染情绪。",
-      "file": "abyss-command.md",
-      "default": false,
-      "persona": "abyss",
-      "targets": ["claude", "codex", "gemini"]
-    },
-    {
-      "slug": "abyss-ritual",
-      "label": "祭仪长卷",
-      "description": "更强仪式感与叙事张力，适合沉浸式长任务与战报场景。",
-      "file": "abyss-ritual.md",
-      "default": false,
       "persona": "abyss",
       "targets": ["claude", "codex", "gemini"]
     },

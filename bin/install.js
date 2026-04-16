@@ -195,7 +195,7 @@ ${c.b('示例:')}
   npx code-abyss                        ${c.d('# 交互菜单')}
   npx code-abyss --list-styles           ${c.d('# 查看可用风格')}
   npx code-abyss --target claude -y      ${c.d('# 零配置一键安装')}
-  npx code-abyss --target codex --style abyss-concise -y
+  npx code-abyss --target codex --style scholar-classic -y
                                    ${c.d('# 指定风格安装')}
   npx code-abyss --uninstall claude      ${c.d('# 直接卸载')}
 `);
