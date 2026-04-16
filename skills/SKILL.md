@@ -8,27 +8,32 @@ disable-model-invocation: false
 
 # 神通秘典 · 总纲
 
-## 层次
+## 路由表
 
-`domains/` 知识路由 | `tools/` 可执行关卡 | `orchestration/` 多 Agent | `run_skill.js` 脚本执行入口
-
-## 路由
-
-- 红队/exploit/pentest → `domains/security/*`；蓝队/IR/SIEM → `security/blue-team.md`；审计/污点 → `security/code-audit.md`
-- 语言 → `domains/development/*` | 架构/API/云原生 → `domains/architecture/*`
-- Git/测试/DB/DevOps → `domains/devops/*` | AI/Agent/RAG → `domains/ai/*`
-- 多 Agent/并行 → `orchestration/multi-agent/SKILL.md`
-
-## 运行时
-
-- `user-invocable: true` 方入调用集；scripted 仅一个 `scripts/*.js`；knowledge 只读
-- Claude → `~/.claude/commands/*.md` | Codex → `~/.agents/skills/**/SKILL.md`
+| 触发词 | 路由 |
+|--------|------|
+| 渗透/exploit/红队/PoC | `domains/security/` → pentest·red-team·vuln-research |
+| 审计/污点/Source-Sink | `domains/security/code-audit.md` |
+| 蓝队/IR/SIEM/取证 | `domains/security/blue-team.md` |
+| 情报/OSINT/ATT&CK | `domains/security/threat-intel.md` |
+| 编程/语言/Python/Go/Rust/TS/Java/C++ | `domains/development/` |
+| 架构/API/云原生/缓存/消息队列 | `domains/architecture/` |
+| Git/测试/CI·CD/DB/性能/可观测/FinOps | `domains/devops/` |
+| AI/LLM/Agent/RAG/Prompt | `domains/ai/` |
+| K8s/Helm/GitOps/IaC/Terraform | `domains/infrastructure/` |
+| 数据管道/ETL/流处理/数据质量 | `domains/data-engineering/` |
+| 移动/iOS/Android/RN/Flutter | `domains/mobile/` |
+| 多Agent/并行协作 | `orchestration/multi-agent/SKILL.md` |
 
 ## 自动关卡
 
-- 新模块：`/gen-docs`→`/verify-module`→`/verify-security`
-- 大改动：`/verify-change`→`/verify-quality` | 安全：`/verify-security`
+| 场景 | 关卡链 |
+|------|--------|
+| 新模块 | `/gen-docs` → `/verify-module` → `/verify-security` |
+| 大改动/重构 | `/verify-change` → `/verify-quality` |
+| 安全相关 | `/verify-security` |
 
-## 作者入口
+## 运行时
 
-`docs/SKILL_AUTHORING.md` · `docs/PACK_MANIFEST_SCHEMA.md` · `docs/PACKS_LOCK_SCHEMA.md`
+`user-invocable: true` 方入调用集。scripted = 唯一 `scripts/*.js`；knowledge = 只读。
+Claude → `~/.claude/commands/*.md` | Codex → `~/.agents/skills/**/SKILL.md`

@@ -11,9 +11,19 @@ disable-model-invocation: false
 ## 四要素
 
 1. **透明** — `rgba()`/`hsla()` 半透明底，alpha `0.05–0.4`
-2. **模糊** — `backdrop-filter: blur()` 8–40px，磨砂质感
-3. **细边** — 半透明边框（`1px solid rgba(255,255,255,0.18)`）
+2. **模糊** — `backdrop-filter: blur()` 磨砂质感
+3. **细边** — 半透明边框 `1px solid rgba(255,255,255,0.18)`
 4. **柔影** — 多层 `box-shadow` 营造纵深
+
+## 模糊值参考
+
+| 组件类型 | blur 值 | 用途 |
+|----------|---------|------|
+| 按钮/小控件 | `4–8px` | 轻微质感，不遮内容 |
+| 卡片/面板 | `12–20px` | 标准毛玻璃 |
+| 导航栏 | `20–30px` | 固定层需强隔离 |
+| 模态遮罩 | `4–8px` | 背景虚化，聚焦前景 |
+| 模态面板 | `24–40px` | 最大深度隔离 |
 
 ## CSS Tokens
 
@@ -21,7 +31,7 @@ disable-model-invocation: false
 
 ## 组件速查
 
-所有组件共享：`backdrop-filter: var(--glass-blur)` + `-webkit-backdrop-filter` + `border: var(--glass-border)`
+共享：`backdrop-filter` + `-webkit-backdrop-filter` + `border: var(--glass-border)`
 
 ```css
 /* Card */
@@ -45,34 +55,61 @@ disable-model-invocation: false
   -webkit-backdrop-filter: var(--glass-blur-light); border: var(--glass-border);
   border-radius: var(--glass-radius); transition: background 0.2s; }
 .glass-btn:hover { background: var(--glass-bg); }
+.glass-btn:focus-visible { outline: 2px solid var(--glass-accent); outline-offset: 2px; }
 ```
 
-## 浏览器兼容
+## 浏览器兼容与回退
 
 | 特性 | Chrome | Firefox | Safari | Edge |
 |------|--------|---------|--------|------|
 | `backdrop-filter` | 76+ | 103+ | 9+(`-webkit-`) | 79+ |
 
-须附 `-webkit-backdrop-filter`。Firefox <103 用 `@supports` 回退：
+回退策略：先写不透明底色，`@supports` 内覆盖为半透明 + blur。须附 `-webkit-` 前缀。
 
 ```css
+/* 渐进增强：不支持时退化为高不透明度纯色底 */
 .glass-card { background: rgba(255,255,255,0.85); }
 @supports (backdrop-filter: blur(1px)) {
-  .glass-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur); }
+  .glass-card { background: var(--glass-bg); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur); }
+}
+```
+
+## 移动端性能
+
+`backdrop-filter` 触发 GPU 合成层，低端设备代价高。
+
+- 限制同屏 blur 元素 ≤ 3 个
+- 滚动容器内避免 blur（触发逐帧重绘）
+- 低端设备可用 `@media (hover: none)` 降级为纯色底
+- `will-change: backdrop-filter` 仅在动画前设置，动画后移除
+
+## 暗色模式
+
+亮色用白调玻璃 `rgba(255,255,255,0.1–0.3)`，暗色用深调 `rgba(0,0,0,0.3–0.5)` 配更强 blur 补偿透光不足。
+
+```css
+[data-theme="dark"] .glass-card {
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.9);
 }
 ```
 
 ## 无障碍
 
 - 玻璃面文字须保 contrast ≥ 4.5:1，逐底色验证
-- `prefers-reduced-transparency` 关闭模糊与透明
-- `prefers-contrast: more` 增边框不透明度
+- `prefers-reduced-motion: reduce` 禁动画（`prefers-reduced-transparency` 尚非标准，不可依赖）
+- `prefers-contrast: more` 增边框不透明度、提升底色 alpha
 
 ```css
-@media (prefers-reduced-transparency: reduce) {
-  .glass-card { background: rgba(255,255,255,0.92); backdrop-filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  .glass-card { backdrop-filter: none; -webkit-backdrop-filter: none;
+    background: rgba(255,255,255,0.92); transition: none; }
 }
 @media (prefers-contrast: more) {
-  .glass-card { background: rgba(255,255,255,0.85); border: 1px solid rgba(0,0,0,0.3); }
+  .glass-card { background: rgba(255,255,255,0.85);
+    border: 1px solid rgba(0,0,0,0.3); }
 }
-```

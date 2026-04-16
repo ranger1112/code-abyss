@@ -16,10 +16,10 @@ disable-model-invocation: false
 
 ## 适用
 
-大型任务分解 · 多文件并行 · 系统重构 · 跨模块协同 · 紧急多点修复
+大型任务分解 · 多文件并行 · 系统重构 · 跨模块协同
 
-## Codex 要点
+## Codex 协议
 
-- 优先 `spawn_agent/send_input/wait/close_agent` 闭环
-- 探索用 `explorer`，改动用 `worker`，长耗时用 `awaiter`
-- 同一文件同一时刻仅一 Agent 写入，先锁再并行
+`spawn_agent` → `send_input` → `wait` → `close_agent` 闭环。
+探索用 `explorer`，改动用 `worker`，长耗时用 `awaiter`。
+同一文件同一时刻仅一 Agent 写入。

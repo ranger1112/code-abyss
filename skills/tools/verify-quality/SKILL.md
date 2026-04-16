@@ -9,16 +9,9 @@ allowed-tools: Bash, Read, Glob
 argument-hint: <扫描路径>
 ---
 
-# ⚖ 校验关卡 · 代码质量
+# 代码质量校验关卡
 
-## 道基
-
-```
-质量 = 可读 + 可维护 + 可测试
-复杂度乃 bug 温床，劣码即技术债
-```
-
-## 自动检查
+## 命令
 
 ```bash
 node scripts/quality_checker.js <路径>
@@ -28,69 +21,43 @@ node scripts/quality_checker.js <路径> --json  # JSON
 
 ## 检测指标
 
-### 复杂度
+| 指标 | 阈值 | 超标处置 |
+|------|------|----------|
+| 圈复杂度 | <=10 | 拆分函数 |
+| 函数长度 | <=50 行 | 提取子函数 |
+| 文件长度 | <=500 行 | 拆分模块 |
+| 参数数量 | <=5 | 封装对象 |
+| 嵌套深度 | <=4 | 早返回/提取 |
+| 行长度 | <=120 | 换行 |
 
-| 指标 | 阈值 | 超标 |
-|------|------|------|
-| 圈复杂度 | ≤ 10 | 🟠 拆分 |
-| 函数长度 | ≤ 50 行 | 🟠 拆分 |
-| 文件长度 | ≤ 500 行 | 🟡 拆分 |
-| 参数数量 | ≤ 5 | 🟠 封装 |
-| 嵌套深度 | ≤ 4 | 🟠 重构 |
-| 行长度 | ≤ 120 | 🔵 提示 |
+## 代码异味
 
-### 命名规范
+| 异味 | 严重度 | 处置 |
+|------|--------|------|
+| 重复代码 >10 行 | High | 提取公共函数 |
+| 参数 >5 个 | Medium | 封装参数对象 |
+| 魔法数字 | Medium | 提取常量 |
+| 死代码/注释代码块 | Low | 删除 |
 
-| 类型 | 规范 | 示例 |
-|------|------|------|
-| 类名 | PascalCase | `UserService` |
-| 函数名 | snake_case | `get_user` |
-| 常量 | UPPER_SNAKE | `MAX_RETRY` |
-| 变量 | snake_case | `user_id` |
+## 命名规范
 
-### 代码异味
-
-| 异味 | 严重度 |
-|------|--------|
-| 重复代码 >10 行 | 🟠 High |
-| 参数 >5 个 | 🟡 Medium |
-| 魔法数字 | 🟡 Medium |
-| 死代码 | 🔵 Low |
-| 注释代码块 | 🔵 Low |
-
-## 流程
-
-```
-扫描 → 算复杂度 → 检异味 → 验命名 → 出报告
-```
-
-报告以 `quality_checker.js` 实际输出为准。
+类名 PascalCase | 函数 snake_case/camelCase | 常量 UPPER_SNAKE | 变量 snake_case/camelCase
 
 ## 重构范式
 
 ```python
-# 🔴 深嵌套
-def process(data):
-    if c1:
-        if c2:
-            if c3:
-                pass
-
-# ✅ 早返回
+# 深嵌套 → 早返回
 def process(data):
     if not c1: return
     if not c2: return
-    if not c3: return
     # 主逻辑
 
-# 🔴 重复
-def f1(): # 10行同逻辑
-def f2(): # 10行同逻辑
-
-# ✅ 提取
+# 重复 → 提取
 def common(): ...
 def f1(): common()
 def f2(): common()
 ```
 
----
+## 触发条件
+
+复杂模块 | 重构完成 | 提交前。报告以 `quality_checker.js` 实际输出为准。
