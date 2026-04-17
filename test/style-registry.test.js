@@ -50,7 +50,7 @@ describe('style registry', () => {
 
   test('心口分离：任意人格 × 任意风格自由组合', () => {
     const content = renderGeminiContext(projectRoot, 'abyss-cultivator', 'elder-sister');
-    expect(content).toContain('# 知性大姐姐 · 星霜雅筑 v1.0');
+    expect(content).toContain('# 知性大姐姐 · 星霜雅筑 v2.0');
     expect(content).toContain('# 宿命深渊 · 输出之道');
   });
 
