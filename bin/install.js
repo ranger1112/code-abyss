@@ -238,6 +238,16 @@ function runUninstall(tgt) {
     if (fs.existsSync(targetPath)) {
       rmSafe(targetPath);
       console.log(`  ${c.red('✘')} ${manifestLabel(entry, tgt)}`);
+      if (normalized.root !== tgt) {
+        let parent = path.dirname(targetPath);
+        while (parent !== installRoot && parent !== path.dirname(parent)) {
+          try {
+            if (fs.readdirSync(parent).length > 0) break;
+            fs.rmdirSync(parent);
+          } catch { break; }
+          parent = path.dirname(parent);
+        }
+      }
     }
   });
   (manifest.backups || []).forEach((entry) => {
