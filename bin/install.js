@@ -820,8 +820,6 @@ function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
     pruneLegacyCodexSettings(tgt, backupDir, manifest);
   }
 
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-
   // 根据独立选择的 persona 覆盖 CLAUDE.md / GEMINI.md
   if (selectedPersona) {
     const personaContent = readPersonaContent(PKG_ROOT, selectedPersona);
@@ -838,10 +836,13 @@ function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
       const agentsMdPath = path.join(targetDir, 'AGENTS.md');
       const guidance = renderCodexAgents(PKG_ROOT, selectedStyle.slug, selectedPersona.slug);
       fs.writeFileSync(agentsMdPath, guidance);
+      pushManifestEntry(manifest.installed, 'codex', 'AGENTS.md');
       ok(`人格（心）→ ${c.mag(selectedPersona.label)} (${selectedPersona.slug})`);
       ok(`风格（口）→ ${c.mag(selectedStyle.label)} → ~/.codex/AGENTS.md`);
     }
   }
+
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
   const uSrc = path.join(PKG_ROOT, 'bin', 'uninstall.js');
   const uDest = path.join(targetDir, '.sage-uninstall.js');
