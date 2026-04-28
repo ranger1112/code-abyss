@@ -40,7 +40,7 @@ The installer generates target-specific artifacts for each CLI:
 | Target | Config | Skills | Style |
 |--------|--------|--------|-------|
 | Claude | `~/.claude/CLAUDE.md` + `settings.json` | `~/.claude/commands/*.md` + `~/.claude/skills/` | `settings.json.outputStyle` |
-| Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` + `~/.agents/skills/gstack/` | `~/.codex/AGENTS.md` |
+| Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` | `~/.codex/AGENTS.md` |
 | Gemini | `~/.gemini/GEMINI.md` + `settings.json` | `~/.gemini/commands/*.toml` + `~/.gemini/skills/` | `GEMINI.md` |
 
 ## Personas
@@ -121,8 +121,7 @@ npx code-abyss --list-styles    # List all available styles
 ├── bin/lib/         (runtime libs) ├── config.toml      (recommended config)
 ├── settings.json    (config)       └── .sage-uninstall.js
 └── .sage-uninstall.js
-                                    ~/.agents/
-~/.gemini/                          └── skills/gstack/   (gstack pack)
+~/.gemini/
 ├── GEMINI.md        (persona + style)
 ├── commands/*.toml  (commands)
 ├── skills/          (domain skills)
@@ -159,7 +158,7 @@ node skills/tools/gen-docs/scripts/doc_generator.js <path>
 Code Abyss supports installable packs for extending functionality per target CLI.
 
 - `packs/abyss/manifest.json` — core pack: persona, styles, skills, runtime libs
-- `packs/gstack/manifest.json` — pinned upstream gstack runtime (auto-installed for Codex)
+- `packs/gstack/manifest.json` — optional pinned upstream gstack runtime (installed only when declared in `packs.lock`)
 - `.code-abyss/packs.lock.json` — project-level pack declarations with `required`/`optional`/`sources`
 
 Pack management:

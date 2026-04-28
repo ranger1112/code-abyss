@@ -52,8 +52,8 @@ describe('claude install smoke', () => {
     expect(fs.existsSync(path.join(claudeDir, 'skills'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, 'commands'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, 'commands', 'gen-docs.md'))).toBe(true);
-    expect(fs.existsSync(path.join(claudeDir, 'commands', 'review.md'))).toBe(true);
-    expect(fs.existsSync(path.join(claudeDir, 'skills', 'gstack', 'review', 'SKILL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'review.md'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'skills', 'gstack'))).toBe(false);
     expect(fs.existsSync(path.join(claudeDir, 'settings.json'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, '.sage-uninstall.js'))).toBe(true);
   });
@@ -178,16 +178,12 @@ describe('gemini install smoke', () => {
   test('安装 Gemini 时生成 GEMINI.md、skills、commands 与 settings.json', () => {
     const result = runInstall(['--target', 'gemini', '-y']);
     const geminiDir = path.join(tmpHome, '.gemini');
-    const reviewSkill = fs.readFileSync(path.join(geminiDir, 'skills', 'gstack', 'review', 'SKILL.md'), 'utf8');
-
     expect(result.status).toBe(0);
     expect(fs.existsSync(path.join(geminiDir, 'GEMINI.md'))).toBe(true);
     expect(fs.existsSync(path.join(geminiDir, 'skills'))).toBe(true);
     expect(fs.existsSync(path.join(geminiDir, 'commands', 'gen-docs.toml'))).toBe(true);
-    expect(fs.existsSync(path.join(geminiDir, 'commands', 'review.toml'))).toBe(true);
-    expect(fs.existsSync(path.join(geminiDir, 'skills', 'gstack', 'review', 'SKILL.md'))).toBe(true);
-    expect(reviewSkill).toContain('~/.gemini/skills/gstack/review/checklist.md');
-    expect(reviewSkill).not.toContain('~/.claude/skills/gstack');
+    expect(fs.existsSync(path.join(geminiDir, 'commands', 'review.toml'))).toBe(false);
+    expect(fs.existsSync(path.join(geminiDir, 'skills', 'gstack'))).toBe(false);
     expect(fs.existsSync(path.join(geminiDir, 'settings.json'))).toBe(true);
     expect(fs.existsSync(path.join(geminiDir, '.sage-uninstall.js'))).toBe(true);
   });

@@ -39,6 +39,8 @@ node scripts/quality_checker.js <路径> --json  # JSON
 | 魔法数字 | Medium | 提取常量 |
 | 死代码/注释代码块 | Low | 删除 |
 
+说明：`bin/` 下带 Node shebang 的 CLI 入口文件按命令编排层处理，不参与文件长度阈值；其业务逻辑仍应优先下沉到 `bin/lib/`。
+
 ## 命名规范
 
 类名 PascalCase | 函数 snake_case/camelCase | 常量 UPPER_SNAKE | 变量 snake_case/camelCase

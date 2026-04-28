@@ -38,7 +38,7 @@ Code Abyss 是一个三层配置系统：
 | 目标 | 配置 | 技能 | 风格 |
 |------|------|------|------|
 | Claude | `~/.claude/CLAUDE.md` + `settings.json` | `~/.claude/commands/*.md` + `~/.claude/skills/` | `settings.json.outputStyle` |
-| Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` + `~/.agents/skills/gstack/` | `~/.codex/AGENTS.md` |
+| Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` | `~/.codex/AGENTS.md` |
 | Gemini | `~/.gemini/GEMINI.md` + `settings.json` | `~/.gemini/commands/*.toml` + `~/.gemini/skills/` | `GEMINI.md` |
 
 ## 人格系统
@@ -119,8 +119,7 @@ npx code-abyss --list-styles    # 列出所有可用风格
 ├── bin/lib/         (运行时库)     ├── config.toml      (推荐配置)
 ├── settings.json    (配置)         └── .sage-uninstall.js
 └── .sage-uninstall.js
-                                    ~/.agents/
-~/.gemini/                          └── skills/gstack/   (gstack 包)
+~/.gemini/
 ├── GEMINI.md        (人格 + 风格)
 ├── commands/*.toml  (命令)
 ├── skills/          (领域技能)
@@ -157,7 +156,7 @@ node skills/tools/gen-docs/scripts/doc_generator.js <路径>
 Code Abyss 支持可安装的 pack 扩展功能：
 
 - `packs/abyss/manifest.json` — 核心包：人格、风格、技能、运行时库
-- `packs/gstack/manifest.json` — 固定版本的上游 gstack 运行时（Codex 自动安装）
+- `packs/gstack/manifest.json` — 可选的固定版本上游 gstack 运行时（仅在 `packs.lock` 声明时安装）
 - `.code-abyss/packs.lock.json` — 项目级 pack 声明，支持 `required`/`optional`/`sources`
 
 Pack 管理：

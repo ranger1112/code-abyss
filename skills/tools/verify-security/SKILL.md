@@ -32,7 +32,7 @@ node scripts/security_scanner.js <路径> --exclude vendor
 | SSRF | 未验证 URL 请求 | High |
 | 弱加密 | MD5/SHA1 用于安全场景 | Medium |
 | 不安全随机 | random 用于安全场景 | Medium |
-| 调试残留 | console.log、debugger | Low |
+| 调试残留 | debugger、pdb.set_trace、breakpoint | Low |
 
 ## 危险模式速查
 

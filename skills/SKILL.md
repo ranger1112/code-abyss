@@ -36,4 +36,4 @@ disable-model-invocation: false
 ## 运行时
 
 `user-invocable: true` 方入调用集。scripted = 唯一 `scripts/*.js`；knowledge = 只读。
-Claude → `~/.claude/commands/*.md` | Codex → `~/.agents/skills/**/SKILL.md`
+Claude → `~/.claude/commands/*.md` | Codex → `~/.codex/skills/**/SKILL.md`
