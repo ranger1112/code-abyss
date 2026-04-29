@@ -2,7 +2,7 @@
 
 <div align="center">
 
-*Persona-driven configuration system for Claude Code, Codex CLI, and Gemini CLI*
+*Persona-driven configuration system for Claude Code, Codex CLI, Gemini CLI, and OpenClaw*
 
 [![npm](https://img.shields.io/npm/v/code-abyss.svg)](https://www.npmjs.com/package/code-abyss)
 [![CI](https://github.com/telagod/code-abyss/actions/workflows/ci.yml/badge.svg)](https://github.com/telagod/code-abyss/actions/workflows/ci.yml)
@@ -14,7 +14,7 @@
 
 </div>
 
-Code Abyss installs a switchable persona + output style + engineering skill system into your AI coding CLI. One command configures persona rules, proactive execution guidance, output styles, 26 domain skills, and 5 verification tools across Claude Code, Codex CLI, and Gemini CLI.
+Code Abyss installs a switchable persona + output style + engineering skill system into your AI coding CLI. One command configures persona rules, proactive execution guidance, output styles, 26 domain skills, and 5 verification tools across Claude Code, Codex CLI, Gemini CLI, and OpenClaw.
 
 ## Quick Start
 
@@ -23,6 +23,7 @@ npx code-abyss                          # Interactive menu
 npx code-abyss --target claude -y       # One-line install to ~/.claude/
 npx code-abyss --target codex -y        # One-line install to ~/.codex/
 npx code-abyss --target gemini -y       # One-line install to ~/.gemini/
+npx code-abyss --target openclaw -y     # One-line install to ~/.openclaw/
 ```
 
 ## What It Does
@@ -42,6 +43,7 @@ The installer generates target-specific artifacts for each CLI:
 | Claude | `~/.claude/CLAUDE.md` + `settings.json` | `~/.claude/commands/*.md` + `~/.claude/skills/` | `settings.json.outputStyle` |
 | Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` | `~/.codex/AGENTS.md` |
 | Gemini | `~/.gemini/GEMINI.md` + `settings.json` | `~/.gemini/commands/*.toml` + `~/.gemini/skills/` | `GEMINI.md` |
+| OpenClaw | `~/.openclaw/openclaw.json` + `<workspace>/AGENTS.md` + `<workspace>/SOUL.md` | `~/.openclaw/skills/` | `SOUL.md` |
 
 ## Personas
 
@@ -121,6 +123,10 @@ Core skills are now routed automatically by context and are **not exposed as sla
 ├── skills/          (domain skills)
 ├── settings.json    (config)
 └── .sage-uninstall.js
+~/.openclaw/                      <workspace>/
+├── openclaw.json   (optional)    ├── AGENTS.md       (rules / routing)
+├── skills/         (shared)      └── SOUL.md         (persona + style)
+└── .sage-uninstall.js
 ```
 
 All installed files are tracked in `.sage-backup/manifest.json`. Uninstall restores previous state.
@@ -129,11 +135,11 @@ All installed files are tracked in `.sage-backup/manifest.json`. Uninstall resto
 
 ```bash
 # Install
-npx code-abyss --target <claude|codex|gemini> [-y]
+npx code-abyss --target <claude|codex|gemini|openclaw> [-y]
 npx code-abyss --target claude --style <slug> --persona <slug> -y
 
 # Uninstall
-npx code-abyss --uninstall <claude|codex|gemini>
+npx code-abyss --uninstall <claude|codex|gemini|openclaw>
 
 # Info
 npx code-abyss --list-styles
@@ -190,8 +196,9 @@ Generation chain:
 3. Claude: renders `~/.claude/commands/*.md` only when invocable skills exist
 4. Codex: installs to `~/.codex/skills/`, discovered directly, with proactive execution guidance from generated `AGENTS.md` + `instruction.md`
 5. Gemini: renders `~/.gemini/commands/*.toml` only when invocable skills exist, with proactive guidance in generated `GEMINI.md`
-6. Scripted skills execute via `skills/run_skill.js` (lock + spawn + exit code passthrough)
-7. Knowledge skills load `SKILL.md` content directly
+6. OpenClaw: installs shared skills into `~/.openclaw/skills/`, and writes runtime rules/persona into workspace `AGENTS.md` + `SOUL.md`
+7. Scripted skills execute via `skills/run_skill.js` (lock + spawn + exit code passthrough)
+8. Knowledge skills load `SKILL.md` content directly
 
 ## Development
 
@@ -205,7 +212,7 @@ CI runs on Node 18/20/22 across Linux, macOS, and Windows:
 
 - Unit tests + skill contract validation
 - 4 verification tools (security, module, quality, change)
-- Smoke install/uninstall for all 3 targets on all 3 platforms
+- Smoke install/uninstall for Claude / Codex / Gemini / OpenClaw
 
 ## Uninstall
 
@@ -213,6 +220,7 @@ CI runs on Node 18/20/22 across Linux, macOS, and Windows:
 npx code-abyss --uninstall claude
 npx code-abyss --uninstall codex
 npx code-abyss --uninstall gemini
+npx code-abyss --uninstall openclaw
 ```
 
 Backup script alternative:
@@ -221,6 +229,7 @@ Backup script alternative:
 node ~/.claude/.sage-uninstall.js
 node ~/.codex/.sage-uninstall.js
 node ~/.gemini/.sage-uninstall.js
+node ~/.openclaw/.sage-uninstall.js
 ```
 
 Restores backed-up configuration and removes all installed files.

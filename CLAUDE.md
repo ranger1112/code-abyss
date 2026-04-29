@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Code Abyss is an npm package that installs persona configuration plus proactive execution guidance into Claude Code, Codex CLI, and Gemini CLI. It delivers: persona rules, 5 switchable output styles, 26 skills, and 5 executable verification/generation tools.
+Code Abyss is an npm package that installs persona configuration plus proactive execution guidance into Claude Code, Codex CLI, Gemini CLI, and OpenClaw. It delivers: persona rules, 5 switchable output styles, 26 skills, and 5 executable verification/generation tools.
 
 ## Commands
 
@@ -15,6 +15,7 @@ node bin/install.js --help        # Installer CLI help
 node bin/install.js --target claude -y   # Zero-config install to ~/.claude/
 node bin/install.js --target codex -y    # Zero-config install to ~/.codex/
 node bin/install.js --target gemini -y   # Zero-config install to ~/.gemini/
+node bin/install.js --target openclaw -y # Zero-config install to ~/.openclaw/
 node bin/install.js --list-styles        # List available output styles
 ```
 
@@ -32,7 +33,7 @@ Running a single test file:
 npx jest test/install-registry.test.js --runInBand
 ```
 
-CI runs on Node 18/20/22: `npm ci && npm test && npm run verify:skills` plus all 4 verify tools + smoke install/uninstall on 3 platforms.
+CI runs on Node 18/20/22: `npm ci && npm test && npm run verify:skills` plus all 4 verify tools + smoke install/uninstall across Claude / Codex / Gemini / OpenClaw.
 
 ## Architecture
 
@@ -44,7 +45,7 @@ CI runs on Node 18/20/22: `npm ci && npm test && npm run verify:skills` plus all
 | Output Style | `output-styles/*.md` + `index.json` | Style registry + per-style templates |
 | Knowledge | `skills/**/*.md` | Domain skill documents + executable tools |
 
-`config/AGENTS.md` remains a repository snapshot. Codex runtime installation writes a generated `~/.codex/AGENTS.md` containing persona + output style, and installs Code Abyss core skills under `~/.codex/skills/`.
+`config/AGENTS.md` remains a repository snapshot. Codex runtime installation writes a generated `~/.codex/AGENTS.md` containing persona + output style; OpenClaw installation writes runtime rules to workspace `AGENTS.md` and persona/style to workspace `SOUL.md` while installing shared skills under `~/.openclaw/skills/`.
 
 ### Skill Registry (Single Source of Truth)
 
@@ -74,6 +75,7 @@ The installer generates different artifacts per target CLI:
 - **Claude**: `~/.claude/commands/*.md` (optional slash commands) — `runtimeType=scripted` calls `run_skill.js`, `knowledge` reads SKILL.md directly
 - **Codex**: `~/.codex/skills/**/SKILL.md` — Code Abyss installs core skills directly under the Codex managed skills directory; generated `AGENTS.md` + `instruction.md` provide proactive execution guidance
 - **Gemini**: `~/.gemini/GEMINI.md` + `~/.gemini/commands/*.toml` + `~/.gemini/skills/**/SKILL.md` — Gemini reads persistent context from `GEMINI.md`; commands are optional and generated only for invocable skills
+- **OpenClaw**: `~/.openclaw/skills/**/SKILL.md` + `<workspace>/AGENTS.md` + `<workspace>/SOUL.md` — OpenClaw reads shared skills from `~/.openclaw/skills/`; workspace bootstrap files carry rules and persona/style
 
 Claude command generation and Codex/Gemini skill installation share the same skill source tree; only `user-invocable: true` skills emit explicit commands, and the current core set defaults to none.
 
@@ -82,6 +84,7 @@ Claude command generation and Codex/Gemini skill installation share the same ski
 `bin/install.js` is the orchestration layer. Target-specific logic lives in adapters:
 - `bin/adapters/claude.js` — Claude auth detection, settings merge, core files mapping
 - `bin/adapters/codex.js` — Codex auth detection, config.toml merge, core files mapping
+- `bin/adapters/openclaw.js` — OpenClaw workspace resolution, CLI/config detection, core files mapping
 - `bin/lib/ccstatusline.js` — Claude status bar (ccstatusline) integration
 - `bin/lib/style-registry.js` — Style catalog + repository AGENTS snapshot assembly
 - `bin/lib/utils.js` — Shared: `copyRecursive`, `rmSafe`, `deepMergeNew`, `parseFrontmatter`, `shouldSkip`
@@ -123,7 +126,7 @@ aliases: vq                    # optional comma-separated aliases
 
 - Exactly one entry in `output-styles/index.json` must have `default: true`
 - `slug` must be kebab-case, unique
-- `targets` defaults to `["claude", "codex"]` if omitted
+- `targets` defaults to all supported install targets if omitted
 - Corresponding `.md` file must exist in `output-styles/`
 
 ## Install Targets
@@ -133,5 +136,6 @@ aliases: vq                    # optional comma-separated aliases
 | Claude | `~/.claude/CLAUDE.md` | `~/.claude/commands/*.md` (optional) + `~/.claude/skills/` | `settings.json.outputStyle` = slug |
 | Codex | `~/.codex/config.toml` | `~/.codex/skills/` | `~/.codex/AGENTS.md` (persona + style) |
 | Gemini | `~/.gemini/settings.json` | `~/.gemini/GEMINI.md` + `~/.gemini/commands/*.toml` (optional) + `~/.gemini/skills/` | Global context + TOML command runtime |
+| OpenClaw | `~/.openclaw/openclaw.json` | `~/.openclaw/skills/` + `<workspace>/AGENTS.md` + `<workspace>/SOUL.md` | `SOUL.md` persona/style + workspace AGENTS rules |
 
 Backups go to `<target-dir>/.sage-backup/` with `manifest.json`. Uninstall restores from backup.

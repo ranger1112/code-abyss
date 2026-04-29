@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- 新增 `openclaw` 安装 target，并接入 `bin/lib/target-registry.js`、style registry、pack registry 与 bootstrap snippets 的统一目标枚举。
+- 新增 `bin/adapters/openclaw.js`，负责 OpenClaw CLI / config 探测、`~/.openclaw/openclaw.json` 解析，以及 workspace 路径解析。
+- 新增 OpenClaw smoke 回归：覆盖默认安装、自定义 `agents.defaults.workspace`、卸载恢复 `AGENTS.md` / `SOUL.md`。
+
+### Changed
+- 安装器现支持 OpenClaw 运行时布局：共享 skills 写入 `~/.openclaw/skills/`，workspace `AGENTS.md` 写入规则路由，workspace `SOUL.md` 写入人格 + 输出风格。
+- README、中文 README、CLAUDE、pack bootstrap snippets 与 package 描述已同步补齐 OpenClaw 口径与安装/卸载命令。
+- output style registry 现将 `openclaw` 视为一等 target，所有内置风格均支持 OpenClaw。
+
+### Fixed
+- `pack-bootstrap` 对缺失 host 配置的 README / CONTRIBUTING snippet 生成现会安全回退默认值，避免新增 target 后旧 lock 结构触发安装收尾崩溃。
+
+### Verification
+- Jest: **22 suites / 223 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 26 skills 通过
+- OpenClaw smoke: install / custom workspace / uninstall restore 通过
+
 ## [2.1.7] - 2026-04-29
 
 ### Fixed

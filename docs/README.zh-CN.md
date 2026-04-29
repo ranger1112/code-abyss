@@ -2,7 +2,7 @@
 
 <div align="center">
 
-*为 Claude Code / Codex CLI / Gemini CLI 打造的人格驱动配置系统*
+*为 Claude Code / Codex CLI / Gemini CLI / OpenClaw 打造的人格驱动配置系统*
 
 [![npm](https://img.shields.io/npm/v/code-abyss.svg)](https://www.npmjs.com/package/code-abyss)
 [![CI](https://github.com/telagod/code-abyss/actions/workflows/ci.yml/badge.svg)](https://github.com/telagod/code-abyss/actions/workflows/ci.yml)
@@ -12,7 +12,7 @@
 
 </div>
 
-Code Abyss 为你的 AI 编程 CLI 注入可切换的人格 + 输出风格 + 工程技能体系。一条命令即可配置人格规则、主动执行导向、输出风格、26 个领域技能和 5 个校验工具，覆盖 Claude Code、Codex CLI 和 Gemini CLI 三端。
+Code Abyss 为你的 AI 编程 CLI 注入可切换的人格 + 输出风格 + 工程技能体系。一条命令即可配置人格规则、主动执行导向、输出风格、26 个领域技能和 5 个校验工具，覆盖 Claude Code、Codex CLI、Gemini CLI 与 OpenClaw。
 
 ## 快速开始
 
@@ -21,6 +21,7 @@ npx code-abyss                          # 交互式菜单
 npx code-abyss --target claude -y       # 一键安装到 ~/.claude/
 npx code-abyss --target codex -y        # 一键安装到 ~/.codex/
 npx code-abyss --target gemini -y       # 一键安装到 ~/.gemini/
+npx code-abyss --target openclaw -y     # 一键安装到 ~/.openclaw/
 ```
 
 ## 功能概述
@@ -40,6 +41,7 @@ Code Abyss 是一个三层配置系统：
 | Claude | `~/.claude/CLAUDE.md` + `settings.json` | `~/.claude/commands/*.md` + `~/.claude/skills/` | `settings.json.outputStyle` |
 | Codex | `~/.codex/config.toml` + `AGENTS.md` | `~/.codex/skills/` | `~/.codex/AGENTS.md` |
 | Gemini | `~/.gemini/GEMINI.md` + `settings.json` | `~/.gemini/commands/*.toml` + `~/.gemini/skills/` | `GEMINI.md` |
+| OpenClaw | `~/.openclaw/openclaw.json` + `<workspace>/AGENTS.md` + `<workspace>/SOUL.md` | `~/.openclaw/skills/` | `SOUL.md` |
 
 ## 人格系统
 
@@ -119,6 +121,10 @@ npx code-abyss --list-styles    # 列出所有可用风格
 ├── skills/          (领域技能)
 ├── settings.json    (配置)
 └── .sage-uninstall.js
+~/.openclaw/                      <workspace>/
+├── openclaw.json   (可选)        ├── AGENTS.md       (规则 / 路由)
+├── skills/         (共享技能)    └── SOUL.md         (人格 + 风格)
+└── .sage-uninstall.js
 ```
 
 所有安装文件记录在 `.sage-backup/manifest.json` 中，卸载时自动恢复原有状态。
@@ -127,11 +133,11 @@ npx code-abyss --list-styles    # 列出所有可用风格
 
 ```bash
 # 安装
-npx code-abyss --target <claude|codex|gemini> [-y]
+npx code-abyss --target <claude|codex|gemini|openclaw> [-y]
 npx code-abyss --target claude --style <slug> --persona <slug> -y
 
 # 卸载
-npx code-abyss --uninstall <claude|codex|gemini>
+npx code-abyss --uninstall <claude|codex|gemini|openclaw>
 
 # 查看
 npx code-abyss --list-styles
@@ -188,8 +194,9 @@ argument-hint: <路径>          # 可选
 3. Claude：仅在存在可调用 skill 时渲染 `~/.claude/commands/*.md`
 4. Codex：安装到 `~/.codex/skills/`，并由生成的 `AGENTS.md` + `instruction.md` 提供主动执行导向
 5. Gemini：仅在存在可调用 skill 时渲染 `~/.gemini/commands/*.toml`，并由生成的 `GEMINI.md` 提供主动执行导向
-6. 脚本型技能通过 `skills/run_skill.js` 执行（加锁 + spawn + 退出码透传）
-7. 知识型技能直接加载 `SKILL.md` 内容
+6. OpenClaw：将共享 skills 安装到 `~/.openclaw/skills/`，并把运行时规则 / 人格写入 workspace 的 `AGENTS.md` + `SOUL.md`
+7. 脚本型技能通过 `skills/run_skill.js` 执行（加锁 + spawn + 退出码透传）
+8. 知识型技能直接加载 `SKILL.md` 内容
 
 ## 开发
 
@@ -211,6 +218,7 @@ CI 在 Node 18/20/22 + Linux/macOS/Windows 上运行：
 npx code-abyss --uninstall claude
 npx code-abyss --uninstall codex
 npx code-abyss --uninstall gemini
+npx code-abyss --uninstall openclaw
 ```
 
 自动恢复备份的配置，清理所有安装文件。

@@ -197,3 +197,75 @@ describe('gemini install smoke', () => {
     expect(content).toContain('# 墨渊书阁 · 输出之道');
   });
 });
+
+describe('openclaw install smoke', () => {
+  let tmpHome;
+
+  beforeEach(() => {
+    tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'abyss-openclaw-home-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpHome, { recursive: true, force: true });
+  });
+
+  function runInstall(args) {
+    return spawnSync(process.execPath, [path.join(__dirname, '..', 'bin', 'install.js'), ...args], {
+      cwd: path.join(__dirname, '..'),
+      env: {
+        ...process.env,
+        HOME: tmpHome,
+        USERPROFILE: tmpHome,
+      },
+      encoding: 'utf8',
+    });
+  }
+
+  test('安装 OpenClaw 时写入 shared skills + workspace AGENTS/SOUL', () => {
+    const result = runInstall(['--target', 'openclaw', '-y']);
+    const rootDir = path.join(tmpHome, '.openclaw');
+    const workspaceDir = path.join(rootDir, 'workspace');
+
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(rootDir, 'skills'))).toBe(true);
+    expect(fs.existsSync(path.join(workspaceDir, 'AGENTS.md'))).toBe(true);
+    expect(fs.existsSync(path.join(workspaceDir, 'SOUL.md'))).toBe(true);
+    expect(fs.existsSync(path.join(rootDir, '.sage-uninstall.js'))).toBe(true);
+    expect(fs.existsSync(path.join(rootDir, 'commands'))).toBe(false);
+  });
+
+  test('安装 OpenClaw 时尊重 agents.defaults.workspace 自定义路径', () => {
+    const rootDir = path.join(tmpHome, '.openclaw');
+    const customWorkspace = path.join(tmpHome, 'lab', 'openclaw-workspace');
+    fs.mkdirSync(rootDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(rootDir, 'openclaw.json'),
+      JSON.stringify({ agents: { defaults: { workspace: customWorkspace } } }, null, 2) + '\n'
+    );
+
+    const result = runInstall(['--target', 'openclaw', '--style', 'scholar-classic', '-y']);
+    const soulContent = fs.readFileSync(path.join(customWorkspace, 'SOUL.md'), 'utf8');
+
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(customWorkspace, 'AGENTS.md'))).toBe(true);
+    expect(soulContent).toContain('# 墨渊书阁 · 输出之道');
+  });
+
+  test('卸载 OpenClaw 时恢复原 workspace bootstrap 文件', () => {
+    const rootDir = path.join(tmpHome, '.openclaw');
+    const workspaceDir = path.join(rootDir, 'workspace');
+    fs.mkdirSync(workspaceDir, { recursive: true });
+    fs.writeFileSync(path.join(workspaceDir, 'AGENTS.md'), '# legacy agents\n');
+    fs.writeFileSync(path.join(workspaceDir, 'SOUL.md'), '# legacy soul\n');
+
+    const install = runInstall(['--target', 'openclaw', '-y']);
+    expect(install.status).toBe(0);
+    expect(fs.readFileSync(path.join(workspaceDir, 'AGENTS.md'), 'utf8')).not.toContain('legacy');
+
+    const uninstall = runInstall(['--uninstall', 'openclaw']);
+    expect(uninstall.status).toBe(0);
+    expect(fs.readFileSync(path.join(workspaceDir, 'AGENTS.md'), 'utf8')).toContain('legacy agents');
+    expect(fs.readFileSync(path.join(workspaceDir, 'SOUL.md'), 'utf8')).toContain('legacy soul');
+    expect(fs.existsSync(path.join(rootDir, 'skills'))).toBe(false);
+  });
+});
