@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.7] - 2026-04-29
+
+### Fixed
+- 修正 GitHub Actions smoke workflow 断言，使 Claude / Gemini 安装验证与“core skills 默认不暴露 commands”的当前行为一致。
+- CI 安全扫描改为在 workflow 中排除 `skills/domains/office/`，避免新并入的 Office 上游工具链脚本导致 core release 门禁误报。
+- 将上述 CI 修复纳入正式发布，避免 `v2.1.6` 发布后仓库代码与 Actions 结果短暂失配。
+
+### Verification
+- GitHub Actions: main CI 全绿（含 test matrix + Claude/Codex/Gemini smoke）
+- Jest: **22 suites / 220 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 26 skills 通过
+
 ## [2.1.6] - 2026-04-29
 
 ### Added
