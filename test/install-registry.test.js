@@ -262,7 +262,8 @@ describe('scanInvocableSkills', () => {
     if (!fs.existsSync(realSkillsDir)) return;
 
     const results = scanInvocableSkills(realSkillsDir);
-    expect(results).toEqual([]);
+    expect(results).toHaveLength(1);
+    expect(results[0].name).toBe('forge-soul');
   });
 });
 

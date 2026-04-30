@@ -185,8 +185,9 @@ describe('斜杠命令回归防护', () => {
       invocableSkills = scanInvocableSkills(realSkillsDir);
     });
 
-    test('当前核心仓库默认不暴露 user-invocable skill', () => {
-      expect(invocableSkills).toEqual([]);
+    test('当前核心仓库默认不暴露 user-invocable skill (forge-soul 为唯一例外)', () => {
+      expect(invocableSkills).toHaveLength(1);
+      expect(invocableSkills[0].name).toBe('forge-soul');
     });
 
     test('所有 user-invocable skill 的 SKILL.md 路径必须真实存在', () => {
