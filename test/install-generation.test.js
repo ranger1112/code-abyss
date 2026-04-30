@@ -185,8 +185,8 @@ describe('斜杠命令回归防护', () => {
       invocableSkills = scanInvocableSkills(realSkillsDir);
     });
 
-    test('至少存在 6 个 user-invocable skill', () => {
-      expect(invocableSkills.length).toBeGreaterThanOrEqual(6);
+    test('当前核心仓库默认不暴露 user-invocable skill', () => {
+      expect(invocableSkills).toEqual([]);
     });
 
     test('所有 user-invocable skill 的 SKILL.md 路径必须真实存在', () => {
@@ -262,7 +262,7 @@ describe('斜杠命令回归防护', () => {
   });
 
   describeIf('Codex skill metadata 路径一致性', () => {
-    test('openai.yaml 默认提示词指向 ~/.agents/skills', () => {
+    test('openai.yaml 默认提示词指向 ~/.codex/skills', () => {
       const metadataFiles = [
         'tools/gen-docs/agents/openai.yaml',
         'tools/verify-security/agents/openai.yaml',
@@ -274,8 +274,8 @@ describe('斜杠命令回归防护', () => {
 
       metadataFiles.forEach((relPath) => {
         const content = fs.readFileSync(path.join(realSkillsDir, relPath), 'utf8');
-        expect(content).toContain('~/.agents/skills/');
-        expect(content).not.toContain('~/.codex/skills/');
+        expect(content).toContain('~/.codex/skills/');
+        expect(content).not.toContain('~/.agents/skills/');
       });
     });
   });

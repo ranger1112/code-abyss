@@ -68,6 +68,12 @@ const {
   detectGeminiAuth: detectGeminiAuthImpl,
   postGemini: postGeminiFlow,
 } = require(path.join(__dirname, 'adapters', 'gemini.js'));
+const {
+  getOpenClawCoreFiles,
+  resolveOpenClawRuntime,
+  detectOpenClawEnvironment: detectOpenClawEnvironmentImpl,
+  postOpenClaw: postOpenClawFlow,
+} = require(path.join(__dirname, 'adapters', 'openclaw.js'));
 
 // ── ANSI ──
 
@@ -127,7 +133,12 @@ function detectGeminiAuth(settings) {
   return detectGeminiAuthImpl({ settings, HOME, warn });
 }
 
-function resolveManagedRootDir(tgt, rootName = tgt) {
+function detectOpenClawEnvironment() {
+  return detectOpenClawEnvironmentImpl({ HOME, warn });
+}
+
+function resolveManagedRootDir(tgt, rootName = tgt, runtimeRoots = null) {
+  if (runtimeRoots && runtimeRoots[rootName]) return runtimeRoots[rootName];
   return path.join(HOME, getManagedRootRelativeDir(rootName));
 }
 
@@ -217,6 +228,7 @@ function runUninstall(tgt) {
   if (!fs.existsSync(manifestPath)) { fail(`未找到安装记录: ${manifestPath}`); process.exit(1); }
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const runtimeRoots = manifest.runtime_roots || null;
   if (manifest.manifest_version && manifest.manifest_version > 2) {
     fail(`manifest 版本 ${manifest.manifest_version} 不兼容，请升级 code-abyss 后再卸载`);
     process.exit(1);
@@ -233,7 +245,7 @@ function runUninstall(tgt) {
 
   (manifest.installed || []).forEach((entry) => {
     const normalized = normalizeManifestEntry(entry, tgt);
-    const installRoot = resolveManagedRootDir(tgt, normalized.root);
+    const installRoot = resolveManagedRootDir(tgt, normalized.root, runtimeRoots);
     const targetPath = path.join(installRoot, normalized.path);
     if (fs.existsSync(targetPath)) {
       rmSafe(targetPath);
@@ -253,7 +265,7 @@ function runUninstall(tgt) {
     const backupPath = path.join(backupDir, normalized.root, normalized.path);
     const legacyBackupPath = path.join(backupDir, normalized.path);
     const sourcePath = fs.existsSync(backupPath) ? backupPath : legacyBackupPath;
-    const restoreRoot = resolveManagedRootDir(tgt, normalized.root);
+    const restoreRoot = resolveManagedRootDir(tgt, normalized.root, runtimeRoots);
     const restorePath = path.join(restoreRoot, normalized.path);
     if (fs.existsSync(sourcePath)) {
       fs.mkdirSync(path.dirname(restorePath), { recursive: true });
@@ -497,8 +509,8 @@ function installGeminiContext(targetDir, backupDir, manifest, selectedStyle) {
 }
 
 
-function backupManagedPathIfExists(tgt, rootName, backupDir, relPath, manifest) {
-  const targetRoot = resolveManagedRootDir(tgt, rootName);
+function backupManagedPathIfExists(tgt, rootName, backupDir, relPath, manifest, runtimeRoots = null) {
+  const targetRoot = resolveManagedRootDir(tgt, rootName, runtimeRoots);
   const targetPath = path.join(targetRoot, relPath);
   if (!fs.existsSync(targetPath)) return false;
 
@@ -626,13 +638,22 @@ async function resolveInstallStyle(targetName) {
 }
 
 function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
-  const targetDir = resolveManagedRootDir(tgt);
+  const openClawRuntime = tgt === 'openclaw' ? resolveOpenClawRuntime({ HOME, warn }) : null;
+  const runtimeRoots = openClawRuntime
+    ? {
+      openclaw: openClawRuntime.rootDir,
+      'openclaw-workspace': openClawRuntime.workspaceDir,
+    }
+    : null;
+  const targetDir = resolveManagedRootDir(tgt, tgt, runtimeRoots);
   const backupDir = path.join(targetDir, '.sage-backup');
   const manifestPath = path.join(backupDir, 'manifest.json');
 
   const installSummary = tgt === 'codex'
-    ? `${c.cyn(resolveManagedRootDir(tgt, 'codex'))} + ${c.cyn(resolveManagedRootDir(tgt, 'agents'))}`
-    : c.cyn(targetDir);
+    ? `${c.cyn(resolveManagedRootDir(tgt, 'codex', runtimeRoots))} + ${c.cyn(resolveManagedRootDir(tgt, 'agents', runtimeRoots))}`
+    : tgt === 'openclaw'
+      ? `${c.cyn(targetDir)} + ${c.cyn(resolveManagedRootDir(tgt, 'openclaw-workspace', runtimeRoots))}`
+      : c.cyn(targetDir);
   step(1, 3, `安装核心文件 → ${installSummary}`);
   rmSafe(backupDir);
   fs.mkdirSync(backupDir, { recursive: true });
@@ -645,11 +666,14 @@ function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
     ? getCodexCoreFiles()
     : tgt === 'gemini'
       ? getGeminiCoreFiles()
-      : getClaudeCoreFiles();
+      : tgt === 'openclaw'
+        ? getOpenClawCoreFiles()
+        : getClaudeCoreFiles();
 
   const manifest = {
     manifest_version: 2, version: VERSION, target: tgt,
     timestamp: new Date().toISOString(), style: selectedStyle.slug, persona: selectedPersona.slug, installed: [], backups: [],
+    runtime_roots: runtimeRoots || undefined,
     project_packs: packPlan.selected,
     optional_policy: packPlan.optionalPolicy || 'auto',
     pack_reports: [],
@@ -658,7 +682,7 @@ function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
   filesToInstall.forEach(({ src, dest, root }) => {
     const rootName = root || tgt;
     const srcPath = path.join(PKG_ROOT, src);
-    const destRoot = resolveManagedRootDir(tgt, rootName);
+    const destRoot = resolveManagedRootDir(tgt, rootName, runtimeRoots);
     const destPath = path.join(destRoot, dest);
     if (!fs.existsSync(srcPath)) {
       if (src === 'skills') {
@@ -817,6 +841,25 @@ function installCore(tgt, selectedStyle, selectedPersona, packPlan) {
         reason: sourceMode === 'disabled' ? 'source-disabled' : `optional-policy-${packPlan.optionalPolicy || 'auto'}`,
       });
     }
+  } else if (tgt === 'openclaw') {
+    const workspaceDir = resolveManagedRootDir(tgt, 'openclaw-workspace', runtimeRoots);
+    fs.mkdirSync(workspaceDir, { recursive: true });
+
+    backupManagedPathIfExists(tgt, 'openclaw-workspace', backupDir, 'AGENTS.md', manifest, runtimeRoots);
+    backupManagedPathIfExists(tgt, 'openclaw-workspace', backupDir, 'SOUL.md', manifest, runtimeRoots);
+
+    const agentsMdPath = path.join(workspaceDir, 'AGENTS.md');
+    const soulMdPath = path.join(workspaceDir, 'SOUL.md');
+    const agentsContent = fs.readFileSync(path.join(PKG_ROOT, 'config', 'AGENTS.md'), 'utf8');
+    const soulContent = renderGeminiContext(PKG_ROOT, selectedStyle.slug, selectedPersona.slug);
+
+    fs.writeFileSync(agentsMdPath, agentsContent);
+    fs.writeFileSync(soulMdPath, soulContent);
+    pushManifestEntry(manifest.installed, 'openclaw-workspace', 'AGENTS.md');
+    pushManifestEntry(manifest.installed, 'openclaw-workspace', 'SOUL.md');
+
+    ok(`AGENTS.md ${c.d(`(OpenClaw workspace: ${workspaceDir})`)}`);
+    ok(`SOUL.md ${c.d(`(动态生成: ${selectedPersona.slug} + ${selectedStyle.slug})`)}`);
   }
 
   let settingsPath = null;
@@ -937,6 +980,21 @@ async function postGemini(ctx) {
   });
 }
 
+async function postOpenClaw(ctx) {
+  await postOpenClawFlow({
+    runtime: resolveOpenClawRuntime({ HOME, warn }),
+    autoYes,
+    HOME,
+    PKG_ROOT,
+    step,
+    ok,
+    warn,
+    info,
+    c,
+    detected: detectOpenClawEnvironment(),
+  });
+}
+
 // ── 主流程 ──
 
 async function main() {
@@ -970,7 +1028,8 @@ async function main() {
     const ctx = installCore(target, style, persona, packPlan);
     if (target === 'claude') await postClaude(ctx);
     else if (target === 'codex') await postCodex();
-    else await postGemini(ctx);
+    else if (target === 'gemini') await postGemini(ctx);
+    else await postOpenClaw(ctx);
     finish(ctx);
     return;
   }
@@ -1024,9 +1083,23 @@ async function main() {
       await postGemini(ctx);
       finish(ctx); break;
     }
+    case 'install-openclaw': {
+      const persona = await resolveInstallPersona();
+      const style = await resolveInstallStyle('openclaw');
+      const packPlan = await resolveProjectPackPlan('openclaw');
+      info(`人格（心）: ${c.mag(persona.label)}`);
+      info(`风格（口）: ${c.mag(style.slug)}`);
+      if (packPlan.path) {
+        info(`项目 packs: required=[${packPlan.required.join(', ')}] optional=[${packPlan.optional.join(', ')}] policy=${packPlan.optionalPolicy}`);
+      }
+      const ctx = installCore('openclaw', style, persona, packPlan);
+      await postOpenClaw(ctx);
+      finish(ctx); break;
+    }
     case 'uninstall-claude': runUninstall('claude'); break;
     case 'uninstall-codex': runUninstall('codex'); break;
     case 'uninstall-gemini': runUninstall('gemini'); break;
+    case 'uninstall-openclaw': runUninstall('openclaw'); break;
   }
 }
 

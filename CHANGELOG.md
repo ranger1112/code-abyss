@@ -2,6 +2,79 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [2.1.8] - 2026-04-29
+
+### Added
+- 新增 `openclaw` 安装 target，并接入 `bin/lib/target-registry.js`、style registry、pack registry 与 bootstrap snippets 的统一目标枚举。
+- 新增 `bin/adapters/openclaw.js`，负责 OpenClaw CLI / config 探测、`~/.openclaw/openclaw.json` 解析，以及 workspace 路径解析。
+- 新增 OpenClaw smoke 回归：覆盖默认安装、自定义 `agents.defaults.workspace`、卸载恢复 `AGENTS.md` / `SOUL.md`。
+
+### Changed
+- 安装器现支持 OpenClaw 运行时布局：共享 skills 写入 `~/.openclaw/skills/`，workspace `AGENTS.md` 写入规则路由，workspace `SOUL.md` 写入人格 + 输出风格。
+- README、中文 README、CLAUDE、pack bootstrap snippets 与 package 描述已同步补齐 OpenClaw 口径与安装/卸载命令。
+- output style registry 现将 `openclaw` 视为一等 target，所有内置风格均支持 OpenClaw。
+
+### Fixed
+- `pack-bootstrap` 对缺失 host 配置的 README / CONTRIBUTING snippet 生成现会安全回退默认值，避免新增 target 后旧 lock 结构触发安装收尾崩溃。
+
+### Verification
+- Jest: **22 suites / 223 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 26 skills 通过
+- OpenClaw smoke: install / custom workspace / uninstall restore 通过
+
+## [2.1.7] - 2026-04-29
+
+### Fixed
+- 修正 GitHub Actions smoke workflow 断言，使 Claude / Gemini 安装验证与“core skills 默认不暴露 commands”的当前行为一致。
+- CI 安全扫描改为在 workflow 中排除 `skills/domains/office/`，避免新并入的 Office 上游工具链脚本导致 core release 门禁误报。
+- 将上述 CI 修复纳入正式发布，避免 `v2.1.6` 发布后仓库代码与 Actions 结果短暂失配。
+
+### Verification
+- GitHub Actions: main CI 全绿（含 test matrix + Claude/Codex/Gemini smoke）
+- Jest: **22 suites / 220 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 26 skills 通过
+
+## [2.1.6] - 2026-04-29
+
+### Added
+- 并入 Office 文档能力到 core skills：新增 `skills/domains/office/` 总索引，以及 `office-docx` / `office-pdf` / `office-pptx` / `office-xlsx` 四个子 skill，覆盖 Word、PDF、PowerPoint、Excel 与 OOXML 文档自动化场景。
+- `config/CLAUDE.md`、`config/AGENTS.md`、`config/instruction.md` 与 5 个人格文件统一增强“主动协助 / 主动补位 / 顺手闭环”执行导向。
+
+### Changed
+- core skills 默认不再暴露任何 `user-invocable` 命令；`frontend-design`、`gen-docs`、`verify-change`、`verify-module`、`verify-quality`、`verify-security` 以及 Office 相关 skills 全部改为上下文自动路由。
+- README、中文 README、CLAUDE、运行时 guidance 与安装布局文档统一更新到当前口径：26 skills / 15 domains / optional commands / proactive runtime guidance。
+- Claude / Gemini 安装行为同步收敛：仅在存在 `user-invocable: true` skills 时才生成 `commands/` 产物；当前 core 默认无显式命令。
+
+### Fixed
+- 修复 `config/personas/elder-sister.md` 内容缺口，补齐执行链、验证链、技能路由与收口约束。
+- 修正项目文档中的历史陈旧表述（如旧 skills 数量、旧斜杠命令暴露口径、旧运行时说明），避免安装后行为与仓库说明漂移。
+
+### Verification
+- Jest: **22 suites / 220 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 26 skills 通过
+
+## [2.1.5] - 2026-04-28
+
+### Changed
+- Codex 默认运行时收敛为 core skills only：当前项目不再默认声明或安装 gstack，减少 Codex skill context 占用。
+- gstack 保留为可选 project pack，仅在 `.code-abyss/packs.lock.json` 显式声明时安装。
+- Codex skill metadata 默认路径统一到 `~/.codex/skills/`。
+- package description、README、DESIGN、CLAUDE 与 pack 文档同步到当前 21 skills / 5 styles 口径。
+
+### Fixed
+- 质量检查器不再把 `bin/` 下带 Node shebang 的 CLI 编排入口按普通业务模块的 500 行阈值误报为文件过长。
+- 安全扫描器不再把 CLI 正常输出使用的 `console.log` 误报为调试残留；调试规则聚焦 `debugger` / `pdb.set_trace` / `breakpoint`。
+- 增加 docs drift 回归，防止 README 或项目 lock 再次默认启用 gstack。
+
+### Verification
+- Jest: **22 suites / 220 tests passed**（1 skipped）
+- Skill contract gate: `npm run verify:skills` — 21 skills 通过
+- Pack gate: `npm run packs:check` — 通过
+- Quality gate: `quality_checker.js . --json` — 0 warnings
+- Security gate: `security_scanner.js . --json` — 0 findings
+
 ## [2.0.9] - 2026-04-13
 
 ### Fixed

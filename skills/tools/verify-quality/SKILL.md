@@ -3,7 +3,7 @@ name: verify-quality
 description: 代码质量校验关卡。检测复杂度、重复代码、命名规范、函数长度等质量指标。当魔尊提到代码质量、复杂度检查、代码异味、重构建议、lint检查、代码规范时使用。在复杂模块、重构完成时自动触发。
 license: MIT
 compatibility: node>=18
-user-invocable: true
+user-invocable: false
 disable-model-invocation: false
 allowed-tools: Bash, Read, Glob
 argument-hint: <扫描路径>
@@ -38,6 +38,8 @@ node scripts/quality_checker.js <路径> --json  # JSON
 | 参数 >5 个 | Medium | 封装参数对象 |
 | 魔法数字 | Medium | 提取常量 |
 | 死代码/注释代码块 | Low | 删除 |
+
+说明：`bin/` 下带 Node shebang 的 CLI 入口文件按命令编排层处理，不参与文件长度阈值；其业务逻辑仍应优先下沉到 `bin/lib/`。
 
 ## 命名规范
 
