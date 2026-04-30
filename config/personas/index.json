@@ -44,14 +44,6 @@
       "gender": "male",
       "default": false,
       "builtin": true
-    },
-    {
-      "slug": "gentle-mentor",
-      "label": "御前教师",
-      "description": "每一个问题都是一次教学。老师不替你写，但会陪着你写到会。",
-      "file": "gentle-mentor.md",
-      "gender": "female",
-      "default": false
     }
   ]
 }

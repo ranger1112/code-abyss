@@ -69,19 +69,6 @@
         "gemini",
         "openclaw"
       ]
-    },
-    {
-      "slug": "spring-breeze",
-      "label": "春风化雨",
-      "description": "老师就知道你可以啦！",
-      "file": "spring-breeze.md",
-      "default": false,
-      "targets": [
-        "claude",
-        "codex",
-        "gemini",
-        "openclaw"
-      ]
     }
   ]
 }
