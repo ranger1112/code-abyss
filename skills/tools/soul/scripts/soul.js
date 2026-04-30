@@ -488,6 +488,74 @@ function cmdCreateStyle(slug, srcFile, targets, projectRoot) {
   return { slug, label: entry.label, destFile, indexPath };
 }
 
+// ── Formatting ──
+
+function renderTable(headers, rows) {
+  const h = '| ' + headers.join(' | ') + ' |';
+  const s = '|' + headers.map(() => '------').join('|') + '|';
+  const body = rows.map(row => '| ' + row.join(' | ') + ' |').join('\n');
+  return h + '\n' + s + '\n' + body;
+}
+
+function formatListAsTable(type, items) {
+  const label = type === 'personas' ? '人格 · Personas' : '风格 · Output Styles';
+  const lines = [`## ${label}`, ''];
+
+  if (items.length === 0) {
+    lines.push('_(空)_');
+    return lines.join('\n');
+  }
+
+  if (type === 'personas') {
+    const headers = ['Slug', '名号', '描述', '性别', '状态'];
+    const rows = items.map(item => {
+      const flags = [];
+      if (item.default) flags.push('**默认**');
+      if (item.builtin) flags.push('系统');
+      return [
+        '`' + item.slug + '`',
+        item.label || '',
+        item.description || '',
+        item.gender || '',
+        flags.join(' ') || '-',
+      ];
+    });
+    lines.push(renderTable(headers, rows));
+  } else {
+    const headers = ['Slug', '名号', '描述', '目标', '状态'];
+    const rows = items.map(item => {
+      const flags = [];
+      if (item.default) flags.push('**默认**');
+      if (item.builtin) flags.push('系统');
+      return [
+        '`' + item.slug + '`',
+        item.label || '',
+        item.description || '',
+        (item.targets || []).join(', '),
+        flags.join(' ') || '-',
+      ];
+    });
+    lines.push(renderTable(headers, rows));
+  }
+
+  return lines.join('\n');
+}
+
+function formatCurrentAsTable(result, personas, styles) {
+  const personaEntry = personas.find(p => p.slug === result.persona);
+  const styleEntry = styles.find(s => s.slug === result.style);
+  const pLabel = personaEntry ? personaEntry.label : result.persona;
+  const sLabel = styleEntry ? styleEntry.label : result.style;
+  const scopeLabel = result.scope === 'global' ? '全局' : '项目';
+
+  return [
+    `**当前激活**（${scopeLabel}）：`,
+    `- 人格：\`${result.persona}\` — ${pLabel}`,
+    `- 风格：\`${result.style}\` — ${sLabel}`,
+    '',
+  ].join('\n');
+}
+
 // ── CLI ──
 
 function parseSubcommand(argv) {
@@ -504,6 +572,8 @@ function parseSubcommand(argv) {
       opts.targets = argv[++i];
     } else if (argv[i] === '--target' && argv[i + 1]) {
       opts.target = argv[++i];
+    } else if (argv[i] === '--format' && argv[i + 1]) {
+      opts.format = argv[++i];
     } else if (argv[i] === '--global') {
       opts.global = true;
     } else {
@@ -546,26 +616,46 @@ function main() {
 
   try {
     if (cmd === 'list') {
-      const type = args[1]; // personas | styles | all
-      if (!type || (type !== 'personas' && type !== 'styles' && type !== 'all')) {
-        console.error('用法: soul list personas|styles|all [--project-root <path>]');
+      let type = args[1]; // personas | styles | all
+      if (!type) type = 'all';
+      if (type !== 'personas' && type !== 'styles' && type !== 'all') {
+        console.error('用法: soul list personas|styles|all [--project-root <path>] [--format json|table]');
         process.exit(1);
       }
+      const useTable = opts.format === 'table';
+
       if (type === 'all') {
-        const result = {
-          personas: cmdList('personas', opts.projectRoot),
-          styles: cmdList('styles', opts.projectRoot),
-          current: cmdCurrent(opts.target, opts.global, opts.projectRoot),
-        };
-        console.log(JSON.stringify(result, null, 2));
+        const personas = cmdList('personas', opts.projectRoot);
+        const styles = cmdList('styles', opts.projectRoot);
+        const current = cmdCurrent(opts.target, opts.global, opts.projectRoot);
+
+        if (useTable) {
+          console.log(formatListAsTable('personas', personas));
+          console.log('');
+          console.log(formatListAsTable('styles', styles));
+          console.log('');
+          console.log(formatCurrentAsTable(current, personas, styles));
+        } else {
+          console.log(JSON.stringify({ personas, styles, current }, null, 2));
+        }
       } else {
-        const result = cmdList(type, opts.projectRoot);
-        console.log(JSON.stringify(result, null, 2));
+        const items = cmdList(type, opts.projectRoot);
+        if (useTable) {
+          console.log(formatListAsTable(type, items));
+        } else {
+          console.log(JSON.stringify(items, null, 2));
+        }
       }
 
     } else if (cmd === 'current') {
       const result = cmdCurrent(opts.target, opts.global, opts.projectRoot);
-      console.log(JSON.stringify(result, null, 2));
+      if (opts.format === 'table') {
+        const personas = cmdList('personas', opts.projectRoot);
+        const styles = cmdList('styles', opts.projectRoot);
+        console.log(formatCurrentAsTable(result, personas, styles));
+      } else {
+        console.log(JSON.stringify(result, null, 2));
+      }
 
     } else if (cmd === 'validate') {
       const type = args[1];

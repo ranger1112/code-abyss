@@ -334,7 +334,7 @@ function buildClaudeCommandSpec(skill) {
     allowedTools,
     relPath: skill.relPath,
     runtimeType,
-    scriptRunner: `node ${CLAUDE_COMMAND_TARGET.skillRoot}/run_skill.js ${skill.name} $ARGUMENTS`,
+    scriptRunner: `node ${CLAUDE_COMMAND_TARGET.skillRoot}/run_skill.js ${skill.name} $ARGUMENTS --format table`,
     skillPath: getSkillPath(CLAUDE_COMMAND_TARGET.skillRoot, skill.relPath),
   };
 }
@@ -347,9 +347,9 @@ function buildClaudeBody(spec) {
     lines.push(`1. 读取规范：${spec.skillPath}`);
     lines.push(`2. 执行命令：\`${spec.scriptRunner}\``);
     lines.push('3. 按规范分析输出，完成后续动作', '');
-    lines.push('否则跳过规范读取，一气呵成直接执行脚本并展示结果：', '');
+    lines.push('否则跳过规范读取，一气呵成直接执行脚本并原样展示输出结果：', '');
     lines.push(`- 执行：\`${spec.scriptRunner}\``);
-    lines.push('- 将输出格式化为可读表格或列表展示', '');
+    lines.push('- 将脚本输出直接展示给用户，无需重新格式化', '');
     lines.push('全程不要停顿，不要询问是否继续。');
     return lines;
   }
