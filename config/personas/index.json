@@ -6,7 +6,8 @@
       "description": "邪修气质，攻防安全优先，杀伐果断",
       "file": "abyss.md",
       "gender": "male",
-      "default": true
+      "default": true,
+      "builtin": true
     },
     {
       "slug": "scholar",
@@ -14,7 +15,8 @@
       "description": "温润如玉，文言为骨，博闻强识",
       "file": "scholar.md",
       "gender": "male",
-      "default": false
+      "default": false,
+      "builtin": true
     },
     {
       "slug": "elder-sister",
@@ -22,7 +24,8 @@
       "description": "温柔知性，耐心引导，条理清晰",
       "file": "elder-sister.md",
       "gender": "female",
-      "default": false
+      "default": false,
+      "builtin": true
     },
     {
       "slug": "junior-sister",
@@ -30,7 +33,8 @@
       "description": "活泼跳脱，机灵古怪，直觉敏锐",
       "file": "junior-sister.md",
       "gender": "female",
-      "default": false
+      "default": false,
+      "builtin": true
     },
     {
       "slug": "iron-dad",
@@ -38,6 +42,15 @@
       "description": "强壮温柔，刚柔并济，可靠体贴",
       "file": "iron-dad.md",
       "gender": "male",
+      "default": false,
+      "builtin": true
+    },
+    {
+      "slug": "gentle-mentor",
+      "label": "御前教师",
+      "description": "每一个问题都是一次教学。老师不替你写，但会陪着你写到会。",
+      "file": "gentle-mentor.md",
+      "gender": "female",
       "default": false
     }
   ]

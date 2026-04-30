@@ -51,7 +51,7 @@ describe('claude install smoke', () => {
     expect(fs.existsSync(path.join(claudeDir, 'CLAUDE.md'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, 'skills'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, 'commands'))).toBe(true);
-    expect(fs.existsSync(path.join(claudeDir, 'commands', 'forge-soul.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'soul.md'))).toBe(true);
     expect(fs.existsSync(path.join(claudeDir, 'commands', 'gen-docs.md'))).toBe(false);
     expect(fs.existsSync(path.join(claudeDir, 'skills', 'gstack'))).toBe(false);
     expect(fs.existsSync(path.join(claudeDir, 'settings.json'))).toBe(true);

@@ -342,10 +342,14 @@ function buildClaudeCommandSpec(skill) {
 function buildClaudeBody(spec) {
   const lines = [];
   if (spec.runtimeType === 'scripted') {
-    lines.push('以下所有步骤一气呵成，不要在步骤间停顿等待用户输入：', '');
+    // 仅 create 和无参需要向导（AI 需将自然语言转格式化内容），其余直接执行脚本
+    lines.push('若 $ARGUMENTS 的第一词是 create 或参数为空，则以下所有步骤一气呵成，不要在步骤间停顿等待用户输入：', '');
     lines.push(`1. 读取规范：${spec.skillPath}`);
     lines.push(`2. 执行命令：\`${spec.scriptRunner}\``);
     lines.push('3. 按规范分析输出，完成后续动作', '');
+    lines.push('否则跳过规范读取，一气呵成直接执行脚本并展示结果：', '');
+    lines.push(`- 执行：\`${spec.scriptRunner}\``);
+    lines.push('- 将输出格式化为可读表格或列表展示', '');
     lines.push('全程不要停顿，不要询问是否继续。');
     return lines;
   }

@@ -263,7 +263,7 @@ describe('scanInvocableSkills', () => {
 
     const results = scanInvocableSkills(realSkillsDir);
     expect(results).toHaveLength(1);
-    expect(results[0].name).toBe('forge-soul');
+    expect(results[0].name).toBe('soul');
   });
 });
 
